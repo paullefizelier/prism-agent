@@ -14,11 +14,25 @@ export interface ChatConversation {
 }
 
 const STORAGE_KEY = "prism-surf-chat-history-v1";
+const ACTIVE_KEY = "prism-surf-chat-active-v1";
 const MAX_CONVERSATIONS = 30;
 
 const conversations = ref<ChatConversation[]>([]);
 const activeId = ref<string | null>(null);
 let initialized = false;
+
+// Remember which conversation was open so reopening the widget (after the host
+// page reloads/navigates) resumes it instead of starting a fresh chat.
+if (import.meta.client) {
+  watch(activeId, (id) => {
+    try {
+      if (id) localStorage.setItem(ACTIVE_KEY, id);
+      else localStorage.removeItem(ACTIVE_KEY);
+    } catch {
+      // best-effort
+    }
+  });
+}
 
 function deriveTitle(messages: UIMessage[]): string {
   const firstUser = messages.find((m) => m.role === "user");
@@ -37,6 +51,11 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) conversations.value = JSON.parse(raw) as ChatConversation[];
+    // Resume the last open conversation if it's still stored.
+    const last = localStorage.getItem(ACTIVE_KEY);
+    if (last && conversations.value.some((c) => c.id === last)) {
+      activeId.value = last;
+    }
   } catch {
     // Corrupted/unreadable storage: start clean rather than crash the widget.
   }
