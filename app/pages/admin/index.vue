@@ -37,10 +37,20 @@ async function logout() {
 
 <template>
   <UContainer class="py-8 space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 class="text-xl font-semibold">
-        {{ $t("admin.conversations") }}
-      </h1>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <h1 class="text-xl font-semibold">
+          {{ $t("admin.conversations") }}
+        </h1>
+        <UButton
+          to="/admin/products"
+          :label="$t('admin.products.title')"
+          icon="i-lucide-package"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+        />
+      </div>
       <UButton
         :label="$t('admin.logout')"
         icon="i-lucide-log-out"

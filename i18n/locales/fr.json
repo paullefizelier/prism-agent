@@ -3,8 +3,13 @@
     "sizing": "Je calcule ta taille idéale…",
     "comparing": "Je compare les planches…",
     "loadingDetails": "Je récupère la fiche…",
+    "buildingKit": "Je prépare ton équipement…",
     "sizeHeading": "Ta fourchette idéale",
-    "sizeVolume": "Volume conseillé"
+    "sizeVolume": "Volume conseillé",
+    "kitHeading": "Compléter ton équipement",
+    "kitLeash": "Leash",
+    "kitWax": "Wax",
+    "kitBag": "Housse"
   },
   "common": {
     "copy": "Copier",
@@ -60,6 +65,22 @@
     "viewedProduct": "fiche : {name}",
     "back": "Retour",
     "recommendedBoards": "🔎 planches recommandées :",
-    "consultedProduct": "fiche consultée : {name}"
+    "consultedProduct": "fiche consultée : {name}",
+    "products": {
+      "title": "Produits",
+      "count": "{count} produits",
+      "sync": "Synchroniser le catalogue",
+      "reembed": "Regénérer les embeddings",
+      "resync": "Resynchroniser",
+      "reembedOne": "Regénérer l'embedding",
+      "embedded": "Vectorisé",
+      "notEmbedded": "Non vectorisé",
+      "syncDone": "Catalogue synchronisé : {total} produits, {embedded} (ré)indexés",
+      "reembedDone": "{count} embeddings regénérés",
+      "productSynced": "Produit synchronisé",
+      "productReembedded": "Embedding regénéré",
+      "notFound": "Produit introuvable",
+      "error": "Échec de l'opération"
+    }
   }
 }

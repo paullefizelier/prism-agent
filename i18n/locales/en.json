@@ -3,8 +3,13 @@
     "sizing": "Calculating your ideal size…",
     "comparing": "Comparing boards…",
     "loadingDetails": "Loading product details…",
+    "buildingKit": "Putting your kit together…",
     "sizeHeading": "Your ideal range",
-    "sizeVolume": "Recommended volume"
+    "sizeVolume": "Recommended volume",
+    "kitHeading": "Complete your setup",
+    "kitLeash": "Leash",
+    "kitWax": "Wax",
+    "kitBag": "Boardbag"
   },
   "common": {
     "copy": "Copy",
@@ -60,6 +65,22 @@
     "viewedProduct": "product: {name}",
     "back": "Back",
     "recommendedBoards": "🔎 recommended boards:",
-    "consultedProduct": "viewed product: {name}"
+    "consultedProduct": "viewed product: {name}",
+    "products": {
+      "title": "Products",
+      "count": "{count} products",
+      "sync": "Sync catalog",
+      "reembed": "Regenerate embeddings",
+      "resync": "Resync",
+      "reembedOne": "Regenerate embedding",
+      "embedded": "Embedded",
+      "notEmbedded": "Not embedded",
+      "syncDone": "Catalog synced: {total} products, {embedded} (re)indexed",
+      "reembedDone": "{count} embeddings regenerated",
+      "productSynced": "Product synced",
+      "productReembedded": "Embedding regenerated",
+      "notFound": "Product not found",
+      "error": "Operation failed"
+    }
   }
 }

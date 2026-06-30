@@ -47,6 +47,7 @@ const { messages, sendMessage, status, stop, regenerate, error, clearError } =
 const input = ref("");
 const toast = useToast();
 const history = useChatHistory();
+const router = useRouter();
 const historyOpen = ref(false);
 
 // Stable id per conversation; mirrors the active history entry so server-side
@@ -80,7 +81,14 @@ function loadConversation(id: string | null) {
   });
 }
 
-onMounted(() => history.load());
+onMounted(() => {
+  history.load();
+  // Deep-link: restore the conversation named in ?c=<id> if it's stored here.
+  const c = typeof route.query.c === "string" ? route.query.c : undefined;
+  if (c && history.conversations.value.some((conv) => conv.id === c)) {
+    history.select(c);
+  }
+});
 
 // React to selections made from the sidebar / slideover list.
 watch(
@@ -88,6 +96,22 @@ watch(
   (id) => {
     if (restoring) return;
     loadConversation(id);
+  },
+);
+
+// Keep the active conversation id in the URL (?c=) so a conversation is
+// shareable, bookmarkable and survives a reload. Kept separate from the loader
+// watcher so the URL tracks activeId even during a guarded (restoring) switch.
+watch(
+  () => history.activeId.value,
+  (id) => {
+    const current =
+      typeof route.query.c === "string" ? route.query.c : undefined;
+    if (current === (id ?? undefined)) return;
+    const query = { ...route.query };
+    if (id) query.c = id;
+    else delete query.c;
+    router.replace({ path: route.path, query, hash: route.hash });
   },
 );
 
@@ -195,10 +219,9 @@ function partOutput(part: unknown): any {
       <div class="ms-auto flex items-center gap-1">
         <UTooltip :text="$t('chat.switchLanguage')">
           <UButton
-            :label="locale === 'fr' ? 'EN' : 'FR'"
+            :label="locale === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR'"
             color="neutral"
             variant="ghost"
-            size="sm"
             @click="setLocale(locale === 'fr' ? 'en' : 'fr')"
           />
         </UTooltip>
@@ -450,6 +473,26 @@ function partOutput(part: unknown): any {
           <ChatProductDetail
             v-else-if="
               part.type === 'tool-getProductDetails' && !isToolStreaming(part)
+            "
+            :data="partOutput(part)"
+          />
+
+          <!-- Complete the kit: indicator while building, then accessory checklist -->
+          <div
+            v-else-if="
+              part.type === 'tool-completeTheKit' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.buildingKit')" />
+          </div>
+          <ChatKitChecklist
+            v-else-if="
+              part.type === 'tool-completeTheKit' && !isToolStreaming(part)
             "
             :data="partOutput(part)"
           />

@@ -109,11 +109,12 @@ OUTILS COMPLÉMENTAIRES
 - sizeAdvisor : dès que tu connais le poids et le niveau, calcule la fourchette de volume idéale. Sers-t'en pour orienter ta requête searchCatalog (ex. cibler des planches autour du volume conseillé). La carte de volume s'affiche au client.
 - getProductDetails : pour détailler UN modèle précis qui intéresse le client (caractéristiques complètes, description). La fiche s'affiche au client.
 - compareProducts : quand le client hésite entre 2 à 4 modèles, affiche un tableau comparatif. Identifie d'abord les ids via searchCatalog.
-- Ces trois outils affichent eux-mêmes leur résultat au client : commente brièvement, ne recopie pas tout le contenu.
+- completeTheKit : une fois une planche choisie, propose l'équipement complémentaire (leash dimensionné, wax selon l'eau, housse). Passe-lui le boardId de la planche (et waterTemp si tu la connais). Il affiche une checklist + les accessoires.
+- Ces outils affichent eux-mêmes leur résultat au client : commente brièvement, ne recopie pas tout le contenu.
 
 UPSELL / CROSS-SELL — SUBTIL ET HONNÊTE
 - D'abord le bon produit pour le besoin réel. La confiance avant tout.
-- Ensuite seulement, suggère naturellement les accessoires pertinents (leash, wax, housse…) : un searchCatalog(accessory) puis recommendProducts. Jamais de pression. Si un modèle moins cher convient mieux, dis-le.
+- Ensuite seulement, propose l'équipement complémentaire via completeTheKit (le moyen privilégié : il dimensionne et propose leash/wax/housse en une fois). Jamais de pression. Si un modèle moins cher convient mieux, dis-le.
 
 STYLE
 - Concis, concret, amical, dans la langue du visiteur.`
@@ -339,6 +340,108 @@ export default defineLazyEventHandler(async () => {
               })),
               specs
             }
+          }
+        }),
+        completeTheKit: tool({
+          description:
+            "Recommande l'équipement complémentaire d'une planche choisie : dimensionne le leash et la housse d'après la longueur de la planche, conseille le wax selon la température de l'eau, et propose les accessoires correspondants du catalogue. Utilise-le APRÈS qu'une planche a été choisie/recommandée, pour le cross-sell. Le résultat (checklist + cartes accessoires) s'affiche au client : commente brièvement.",
+          inputSchema: z.object({
+            boardId: z
+              .number()
+              .describe('woo_id de la planche choisie (pour déduire sa longueur).')
+              .optional(),
+            boardLengthFeet: z
+              .number()
+              .describe("Longueur de la planche en pieds (ex. 6.5 pour 6'6\"). Fournis-le si connu, sinon boardId tentera de le déduire.")
+              .optional(),
+            waterTemp: z
+              .enum(['cold', 'cool', 'temperate', 'warm', 'tropical'])
+              .describe("Température de l'eau, pour le choix du wax.")
+              .optional(),
+            include: z
+              .array(z.enum(['leash', 'wax', 'bag']))
+              .describe('Accessoires à proposer. Par défaut : leash, wax et housse.')
+              .optional()
+          }),
+          execute: async ({ boardId, boardLengthFeet, waterTemp, include }) => {
+            const supabase = serverSupabaseServiceRole<any>(event)
+            const categories = include?.length ? include : ['leash', 'wax', 'bag']
+
+            // Resolve board length from the product when not given.
+            let lengthFeet = boardLengthFeet
+            if (lengthFeet == null && boardId != null) {
+              const board = await getWooProduct(boardId)
+              lengthFeet = board ? parseLengthFeet(board.attributes) : undefined
+            }
+
+            // Domain sizing rules: leash ≥ board length (rounded up, min 6');
+            // boardbag ~6 inches longer than the board.
+            const leashLength = lengthFeet ? Math.max(6, Math.ceil(lengthFeet)) : null
+            const bagLength = lengthFeet ? Math.ceil(lengthFeet * 2) / 2 + 0.5 : null
+            const waxTemp = waterTemp
+              ? WAX_TIER[waterTemp]![locale === 'en' ? 'en' : 'fr']
+              : null
+
+            const guidance = {
+              leashLength: categories.includes('leash') ? leashLength : null,
+              waxTemp: categories.includes('wax') ? waxTemp : null,
+              bagLength: categories.includes('bag') ? bagLength : null
+            }
+
+            // One semantic query per requested accessory, picking the best
+            // in-stock accessory match for each (no duplicates).
+            const queries: Record<string, string> = {
+              leash: `leash surf${leashLength ? ` ${leashLength} pieds` : ''}`,
+              wax: `wax surf${waxTemp ? ` eau ${waxTemp}` : ''}`,
+              bag: `housse de surf${bagLength ? ` ${bagLength} pieds` : ''}`
+            }
+
+            const pickedIds: number[] = []
+            for (const cat of categories) {
+              const embedding = await embedQuery(queries[cat]!)
+              const { data } = await supabase.rpc('match_products', {
+                query_embedding: JSON.stringify(embedding),
+                match_count: 20,
+                only_in_stock: true
+              })
+              const top = ((data ?? []) as Array<Record<string, unknown>>)
+                .map(r => ({
+                  id: r.woo_id as number,
+                  categories: (r.categories as string[]) ?? []
+                }))
+                .filter(c => matchesType(c.categories, 'accessory'))
+                .map(c => c.id)
+                .find(id => !pickedIds.includes(id))
+              if (top != null) pickedIds.push(top)
+            }
+
+            if (!pickedIds.length) return { guidance, products: [] }
+
+            const { data: rows } = await supabase
+              .from('products')
+              .select('woo_id, name, url, price, regular_price, on_sale, in_stock, image')
+              .in('woo_id', pickedIds)
+            const byId = new Map<number, Record<string, unknown>>(
+              ((rows ?? []) as Array<Record<string, unknown>>).map(r => [
+                r.woo_id as number,
+                r
+              ])
+            )
+            const products = pickedIds
+              .map(id => byId.get(id))
+              .filter((r): r is Record<string, unknown> => Boolean(r))
+              .map(r => ({
+                id: r.woo_id as number,
+                name: r.name as string,
+                url: localizeUrl(r.url as string, locale),
+                price: r.price as string,
+                regularPrice: (r.regular_price as string) ?? '',
+                onSale: Boolean(r.on_sale),
+                inStock: Boolean(r.in_stock),
+                image: (r.image as string) ?? null
+              }))
+
+            return { guidance, products }
           }
         })
       }
