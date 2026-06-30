@@ -1,7 +1,6 @@
-allowBuilds:
-  '@parcel/watcher': false
-  '@tailwindcss/oxide': false
-  esbuild: false
-  sharp: set this to true or false
-  unrs-resolver: false
-  vue-demi: false
+# Build scripts are ignored by default in pnpm 10+. Only the packages listed here
+# may run their install/build scripts. `sharp` (used by @nuxt/image) needs it to
+# fetch its native libvips binary; the others ship prebuilt platform binaries and
+# don't need a build step.
+onlyBuiltDependencies:
+  - sharp
