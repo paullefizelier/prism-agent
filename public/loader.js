@@ -83,10 +83,10 @@
     '*{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}',
     // Right-edge vertical tab, vertically centered
     '.launcher{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:2147483000;',
-    'background:#16a34a;color:#fff;border:none;cursor:pointer;border-radius:12px 0 0 12px;',
+    'background:#00a9eb;color:#fff;border:none;cursor:pointer;border-radius:12px 0 0 12px;',
     'padding:14px 7px;display:flex;flex-direction:column;align-items:center;gap:8px;',
-    'box-shadow:-4px 0 16px rgba(0,0,0,.2);transition:padding-right .15s ease}',
-    '.launcher:hover{padding-right:11px}',
+    'box-shadow:-4px 0 16px rgba(0,0,0,.2);transition:padding-right .15s ease,background .15s ease}',
+    '.launcher:hover{padding-right:11px;background:#0079a8}',
     '.launcher svg{width:22px;height:22px}',
     '.launcher .label{writing-mode:vertical-rl;text-orientation:mixed;font-size:13px;font-weight:600;letter-spacing:.02em}',
     '.launcher .ico-close{display:none}',
