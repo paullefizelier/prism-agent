@@ -21,6 +21,7 @@
   },
   "common": {
     "copy": "Copier",
+    "copied": "Copié",
     "regenerate": "Régénérer",
     "retry": "Réessayer"
   },
@@ -45,6 +46,7 @@
   },
   "product": {
     "view": "Voir le produit",
+    "addToCart": "Ajouter au panier",
     "inStock": "En stock",
     "outOfStock": "Épuisé",
     "sale": "Promo"
@@ -64,6 +66,7 @@
   "admin": {
     "conversations": "Conversations",
     "logout": "Déconnexion",
+    "viewSite": "Voir le site",
     "messages": "Messages",
     "topBoards": "Planches les plus recommandées",
     "none": "Aucune conversation pour l'instant.",
@@ -95,6 +98,20 @@
       "none": "Aucune demande pour l'instant.",
       "viewConversation": "Voir la conversation",
       "all": "Tous",
+      "statusLabel": "Statut",
+      "reasonLabel": "Motif",
+      "openCount": "{count} ouverte(s)",
+      "openCard": "Demandes ouvertes",
+      "statusUpdated": "Statut mis à jour",
+      "error": "Échec de l'opération",
+      "reply": "Répondre",
+      "replySubject": "Votre demande — Prism Surfboards",
+      "replyBody": "Bonjour {name},\n\nMerci pour votre message. ",
+      "status": {
+        "new": "Nouveau",
+        "in_progress": "En cours",
+        "done": "Traité"
+      },
       "reason": {
         "callback": "Rappel",
         "sav": "SAV",

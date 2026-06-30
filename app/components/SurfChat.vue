@@ -205,6 +205,24 @@ function productsFromPart(part: unknown): BoardCard[] {
   );
 }
 
+// WooCommerce add-to-cart. The widget lives on the WC site, so navigating the
+// top window to ?add-to-cart hits the visitor's real cart session (variable
+// products redirect to the product page to pick a size).
+function cartUrl(board: BoardCard): string {
+  try {
+    const origin = new URL(board.url).origin;
+    const prefix = locale.value === "en" ? "/en" : "";
+    return `${origin}${prefix}/cart/?add-to-cart=${board.id}`;
+  } catch {
+    return board.url;
+  }
+}
+function addToCart(board: BoardCard) {
+  const url = cartUrl(board);
+  if (props.embedded) (window.top ?? window).location.href = url;
+  else window.open(url, "_blank");
+}
+
 // Tool-result parts carry their payload under `output` once resolved; cast past
 // the loose slot typing so the dedicated renderers receive it.
 function partOutput(part: unknown): any {
@@ -427,13 +445,24 @@ function partOutput(part: unknown): any {
                       }}
                     </span>
                   </div>
-                  <UButton
-                    icon="i-lucide-arrow-up-right"
-                    color="primary"
-                    variant="solid"
-                    size="sm"
-                    :label="$t('product.view')"
-                  />
+                  <div class="flex flex-col gap-1 shrink-0">
+                    <UButton
+                      v-if="board.inStock"
+                      icon="i-lucide-shopping-cart"
+                      color="primary"
+                      variant="solid"
+                      size="sm"
+                      :label="$t('product.addToCart')"
+                      @click.stop.prevent="addToCart(board)"
+                    />
+                    <UButton
+                      icon="i-lucide-arrow-up-right"
+                      color="neutral"
+                      :variant="board.inStock ? 'ghost' : 'solid'"
+                      size="sm"
+                      :label="$t('product.view')"
+                    />
+                  </div>
                 </template>
               </UBlogPost>
             </div>

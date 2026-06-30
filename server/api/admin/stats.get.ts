@@ -46,5 +46,12 @@ export default defineEventHandler(async (event) => {
     count
   }))
 
-  return { totalConversations, totalMessages, topBoards }
+  // Open leads (status 'new'). Defensive: if the leads table isn't migrated
+  // yet, count comes back null — fall back to 0 rather than failing the page.
+  const { count: openLeads } = await supabase
+    .from('leads')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'new')
+
+  return { totalConversations, totalMessages, topBoards, openLeads: openLeads ?? 0 }
 })

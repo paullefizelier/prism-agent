@@ -130,6 +130,20 @@ export default defineLazyEventHandler(async () => {
   const google = createGoogleGenerativeAI({ apiKey: config.googleApiKey })
 
   return defineEventHandler(async (event) => {
+    // Anti-spam: ~30 messages / 10 min per IP (Supabase-backed, shared across
+    // serverless instances). Fails open if the migration isn't applied yet.
+    const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
+    const { data: allowed } = await serverSupabaseServiceRole<any>(event).rpc(
+      'check_rate_limit',
+      { p_key: `chat:${ip}`, p_limit: 30, p_window_seconds: 600 }
+    )
+    if (allowed === false) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Trop de messages, réessaie dans un instant.'
+      })
+    }
+
     const { messages, productContext, conversationId, locale } = await readBody<{
       messages: UIMessage[]
       productContext?: {

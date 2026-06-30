@@ -21,6 +21,7 @@
   },
   "common": {
     "copy": "Copy",
+    "copied": "Copied",
     "regenerate": "Regenerate",
     "retry": "Retry"
   },
@@ -45,6 +46,7 @@
   },
   "product": {
     "view": "View product",
+    "addToCart": "Add to cart",
     "inStock": "In stock",
     "outOfStock": "Out of stock",
     "sale": "Sale"
@@ -64,6 +66,7 @@
   "admin": {
     "conversations": "Conversations",
     "logout": "Sign out",
+    "viewSite": "View site",
     "messages": "Messages",
     "topBoards": "Most recommended boards",
     "none": "No conversations yet.",
@@ -95,6 +98,20 @@
       "none": "No requests yet.",
       "viewConversation": "View conversation",
       "all": "All",
+      "statusLabel": "Status",
+      "reasonLabel": "Reason",
+      "openCount": "{count} open",
+      "openCard": "Open requests",
+      "statusUpdated": "Status updated",
+      "error": "Operation failed",
+      "reply": "Reply",
+      "replySubject": "Your request — Prism Surfboards",
+      "replyBody": "Hi {name},\n\nThanks for your message. ",
+      "status": {
+        "new": "New",
+        "in_progress": "In progress",
+        "done": "Done"
+      },
       "reason": {
         "callback": "Callback",
         "sav": "After-sales",

@@ -1,11 +1,10 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'admin' })
 
-const supabase = useSupabaseClient()
-
 interface Stats {
   totalConversations: number
   totalMessages: number
+  openLeads: number
   topBoards: { woo_id: number, name: string, count: number }[]
 }
 interface ConvoItem {
@@ -29,47 +28,16 @@ function fmtDate(d: string) {
   })
 }
 
-async function logout() {
-  await supabase.auth.signOut()
-  navigateTo('/login')
-}
 </script>
 
 <template>
   <UContainer class="py-8 space-y-6">
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div class="flex items-center gap-3">
-        <h1 class="text-xl font-semibold">
-          {{ $t("admin.conversations") }}
-        </h1>
-        <UButton
-          to="/admin/products"
-          :label="$t('admin.products.title')"
-          icon="i-lucide-package"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-        />
-        <UButton
-          to="/admin/leads"
-          :label="$t('admin.leads.title')"
-          icon="i-lucide-inbox"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-        />
-      </div>
-      <UButton
-        :label="$t('admin.logout')"
-        icon="i-lucide-log-out"
-        color="neutral"
-        variant="ghost"
-        @click="logout"
-      />
-    </div>
+    <h1 class="text-xl font-semibold">
+      {{ $t("admin.conversations") }}
+    </h1>
 
     <!-- Stats -->
-    <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <UCard>
         <p class="text-sm text-muted">
           {{ $t("admin.conversations") }}
@@ -86,6 +54,20 @@ async function logout() {
           {{ stats?.totalMessages ?? 0 }}
         </p>
       </UCard>
+      <NuxtLink to="/admin/leads" class="block">
+        <UCard class="h-full transition hover:bg-elevated">
+          <p class="text-sm text-muted flex items-center gap-1.5">
+            <UIcon name="i-lucide-inbox" class="size-4" />
+            {{ $t("admin.leads.openCard") }}
+          </p>
+          <p
+            class="text-2xl font-semibold"
+            :class="stats?.openLeads ? 'text-info' : ''"
+          >
+            {{ stats?.openLeads ?? 0 }}
+          </p>
+        </UCard>
+      </NuxtLink>
       <UCard>
         <p class="text-sm text-muted mb-1">
           {{ $t("admin.topBoards") }}

@@ -62,8 +62,8 @@
   var ctx = detectContext();
   var lang = ctx.lang || 'fr';
   var L = ({
-    fr: { launch: 'Conseiller', open: 'Ouvrir le conseiller Prism', close: 'Fermer', full: 'Ouvrir l’application complète' },
-    en: { launch: 'Advisor', open: 'Open the Prism advisor', close: 'Close', full: 'Open the full app' }
+    fr: { launch: 'Conseiller', open: 'Ouvrir le conseiller Prism', close: 'Fermer', full: 'Ouvrir l’application complète', expand: 'Agrandir', collapse: 'Réduire' },
+    en: { launch: 'Advisor', open: 'Open the Prism advisor', close: 'Close', full: 'Open the full app', expand: 'Enlarge', collapse: 'Shrink' }
   })[lang];
 
   function iframeUrl() {
@@ -99,6 +99,11 @@
     'box-shadow:0 12px 40px rgba(0,0,0,.3);display:flex;flex-direction:column;',
     'opacity:0;transform:translateY(12px) scale(.98);pointer-events:none;transition:opacity .18s ease,transform .18s ease}',
     '.panel.open{opacity:1;transform:none;pointer-events:auto}',
+    // Enlarged in-place (toggled from the toolbar)
+    '.panel.max{width:min(960px,calc(100vw - 40px));height:calc(100vh - 40px)}',
+    '.maximize .ico-collapse{display:none}',
+    '.panel.max .maximize .ico-expand{display:none}',
+    '.panel.max .maximize .ico-collapse{display:block}',
     '.bar{display:flex;align-items:center;justify-content:flex-end;gap:2px;height:38px;',
     'padding:0 6px;border-bottom:1px solid #e5e7eb;background:#fff;flex:none}',
     '.bar a,.bar button{display:flex;align-items:center;justify-content:center;width:30px;height:30px;',
@@ -117,6 +122,10 @@
     '</button>',
     '<div class="panel" role="dialog" aria-label="Prism Surf Advisor">',
     '<div class="bar">',
+    '<button class="maximize" title="' + L.expand + '" aria-label="' + L.expand + '">',
+    '<span class="ico-expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg></span>',
+    '<span class="ico-collapse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg></span>',
+    '</button>',
     '<a class="full" href="' + origin + '/" target="_blank" rel="noopener" title="' + L.full + '" aria-label="' + L.full + '">',
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg></a>',
     '<button class="close" title="' + L.close + '" aria-label="' + L.close + '">',
@@ -151,6 +160,14 @@
 
   launcher.addEventListener('click', function () { setOpen(!open); });
   root.querySelector('.bar .close').addEventListener('click', function () { setOpen(false); });
+
+  // Enlarge / shrink the panel in place (no new tab).
+  var maximize = root.querySelector('.bar .maximize');
+  maximize.addEventListener('click', function () {
+    var max = panel.classList.toggle('max');
+    maximize.setAttribute('title', max ? L.collapse : L.expand);
+    maximize.setAttribute('aria-label', max ? L.collapse : L.expand);
+  });
 
   // Allow the chat (inside the iframe) to request closing.
   window.addEventListener('message', function (e) {
