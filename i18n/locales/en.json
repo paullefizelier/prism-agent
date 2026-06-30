@@ -1,4 +1,11 @@
 {
+  "tools": {
+    "sizing": "Calculating your ideal size…",
+    "comparing": "Comparing boards…",
+    "loadingDetails": "Loading product details…",
+    "sizeHeading": "Your ideal range",
+    "sizeVolume": "Recommended volume"
+  },
   "common": {
     "copy": "Copy",
     "regenerate": "Regenerate",

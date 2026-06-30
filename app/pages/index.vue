@@ -8,7 +8,7 @@ definePageMeta({ layout: "embed" });
 <template>
   <UDashboardGroup class="h-dvh">
     <UDashboardSidebar
-      collapsible
+      class="bg-muted"
       resizable
       :min-size="16"
       :default-size="20"

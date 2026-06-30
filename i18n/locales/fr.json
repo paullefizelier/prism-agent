@@ -1,4 +1,11 @@
 {
+  "tools": {
+    "sizing": "Je calcule ta taille idéale…",
+    "comparing": "Je compare les planches…",
+    "loadingDetails": "Je récupère la fiche…",
+    "sizeHeading": "Ta fourchette idéale",
+    "sizeVolume": "Volume conseillé"
+  },
   "common": {
     "copy": "Copier",
     "regenerate": "Régénérer",

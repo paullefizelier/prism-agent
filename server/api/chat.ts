@@ -11,6 +11,52 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 import { embedQuery } from '../utils/embeddings'
 import { matchesType } from '../utils/categories'
 import { persistConversation } from '../utils/conversations'
+import { getWooProduct } from '../utils/woo'
+import { localizeUrl } from '../utils/weglot'
+
+// Surfboard volume guide: recommended litres ≈ bodyweight × a skill-based factor,
+// nudged for wave power, age and fitness (smaller waves / older / less fit need
+// more float to paddle and catch waves). Returns a sensible litre range.
+function computeVolume({
+  weightKg,
+  level,
+  waveType,
+  ageOver45,
+  lowFitness
+}: {
+  weightKg: number
+  level: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+  waveType?: 'small_mushy' | 'average' | 'powerful'
+  ageOver45?: boolean
+  lowFitness?: boolean
+}) {
+  const base: Record<string, [number, number]> = {
+    beginner: [0.9, 1.0],
+    intermediate: [0.55, 0.65],
+    advanced: [0.4, 0.45],
+    expert: [0.35, 0.4]
+  }
+  let [lo, hi] = base[level] ?? base.intermediate!
+  if (waveType === 'small_mushy') {
+    lo += 0.05
+    hi += 0.08
+  } else if (waveType === 'powerful') {
+    lo -= 0.02
+    hi -= 0.02
+  }
+  if (ageOver45) {
+    lo += 0.03
+    hi += 0.04
+  }
+  if (lowFitness) {
+    lo += 0.03
+    hi += 0.04
+  }
+  return {
+    volumeMin: Math.round(weightKg * lo),
+    volumeMax: Math.round(weightKg * hi)
+  }
+}
 
 const SYSTEM_PROMPT = `Tu es le conseiller IA de Prism Surfboards (https://www.prism-surfboards.com), un shaper de planches de surf.
 
@@ -35,6 +81,12 @@ CHOIX DE LA PLANCHE — EXPERTISE
 - Pour un VRAI DÉBUTANT, privilégie d'abord les planches en MOUSSE (gamme STARTER SERIES / Packs Débutant), taillées au gabarit : plus sûres, plus stables, plus flottantes, parfaites pour apprendre. Ne propose les planches époxy/dures (Mini Malibu, Évolutive…) qu'ENSUITE, comme étape de progression, en l'expliquant.
 - Adapte toujours au niveau, au gabarit (poids), au type de vagues et au budget. Pose une question de clarification si le besoin est flou.
 
+OUTILS COMPLÉMENTAIRES
+- sizeAdvisor : dès que tu connais le poids et le niveau, calcule la fourchette de volume idéale. Sers-t'en pour orienter ta requête searchCatalog (ex. cibler des planches autour du volume conseillé). La carte de volume s'affiche au client.
+- getProductDetails : pour détailler UN modèle précis qui intéresse le client (caractéristiques complètes, description). La fiche s'affiche au client.
+- compareProducts : quand le client hésite entre 2 à 4 modèles, affiche un tableau comparatif. Identifie d'abord les ids via searchCatalog.
+- Ces trois outils affichent eux-mêmes leur résultat au client : commente brièvement, ne recopie pas tout le contenu.
+
 UPSELL / CROSS-SELL — SUBTIL ET HONNÊTE
 - D'abord le bon produit pour le besoin réel. La confiance avant tout.
 - Ensuite seulement, suggère naturellement les accessoires pertinents (leash, wax, housse…) : un searchCatalog(accessory) puis recommendProducts. Jamais de pression. Si un modèle moins cher convient mieux, dis-le.
@@ -49,10 +101,11 @@ export default defineLazyEventHandler(async () => {
   const google = createGoogleGenerativeAI({ apiKey: config.googleApiKey })
 
   return defineEventHandler(async (event) => {
-    const { messages, productContext, conversationId } = await readBody<{
+    const { messages, productContext, conversationId, locale } = await readBody<{
       messages: UIMessage[]
       productContext?: { id?: number, name?: string }
       conversationId?: string
+      locale?: string
     }>(event)
 
     // The widget can tell the agent which board the visitor is currently viewing.
@@ -98,7 +151,7 @@ export default defineLazyEventHandler(async () => {
               .map(r => ({
                 id: r.woo_id as number,
                 name: r.name as string,
-                url: r.url as string,
+                url: localizeUrl(r.url as string, locale),
                 categories: (r.categories as string[]) ?? [],
                 price: r.price as string,
                 inStock: Boolean(r.in_stock),
@@ -145,7 +198,7 @@ export default defineLazyEventHandler(async () => {
               .map(r => ({
                 id: r.woo_id as number,
                 name: r.name as string,
-                url: r.url as string,
+                url: localizeUrl(r.url as string, locale),
                 price: r.price as string,
                 regularPrice: (r.regular_price as string) ?? '',
                 onSale: Boolean(r.on_sale),
@@ -154,6 +207,114 @@ export default defineLazyEventHandler(async () => {
                 image: (r.image as string) ?? null
               }))
             return { count: products.length, products }
+          }
+        }),
+        sizeAdvisor: tool({
+          description:
+            "Calcule la fourchette de volume idéale (en litres) d'une planche pour ce surfeur. Appelle-le dès que tu connais le poids et le niveau, AVANT searchCatalog : intègre ensuite le volume conseillé dans ta requête. Le résultat s'affiche au client sous forme de carte ; commente-le, ne le recopie pas en entier.",
+          inputSchema: z.object({
+            weightKg: z.number().describe('Poids du surfeur en kilogrammes.'),
+            level: z
+              .enum(['beginner', 'intermediate', 'advanced', 'expert'])
+              .describe('Niveau de surf du surfeur.'),
+            waveType: z
+              .enum(['small_mushy', 'average', 'powerful'])
+              .describe(
+                'Type de vagues habituel : small_mushy = petites/molles, average = moyennes, powerful = creuses/puissantes.'
+              )
+              .optional(),
+            ageOver45: z
+              .boolean()
+              .describe('Vrai si le surfeur a plus de 45 ans (ajoute du volume).')
+              .optional(),
+            lowFitness: z
+              .boolean()
+              .describe('Vrai si la condition physique est limitée (ajoute du volume).')
+              .optional()
+          }),
+          execute: async ({ weightKg, level, waveType, ageOver45, lowFitness }) => {
+            const { volumeMin, volumeMax } = computeVolume({
+              weightKg,
+              level,
+              waveType,
+              ageOver45,
+              lowFitness
+            })
+            return { weightKg, level, waveType: waveType ?? 'average', volumeMin, volumeMax }
+          }
+        }),
+        getProductDetails: tool({
+          description:
+            "Récupère la fiche détaillée d'UN produit (caractéristiques complètes, description, prix, stock) via son woo_id. Utilise-le quand le client veut en savoir plus sur un modèle précis. La fiche s'affiche au client ; commente-la sans tout recopier.",
+          inputSchema: z.object({
+            productId: z.number().describe('woo_id du produit à détailler.')
+          }),
+          execute: async ({ productId }) => {
+            const p = await getWooProduct(productId)
+            if (!p) return { found: false }
+            return {
+              found: true,
+              product: {
+                id: p.id,
+                name: p.name,
+                url: localizeUrl(p.url, locale),
+                image: p.image,
+                price: p.price,
+                regularPrice: p.regularPrice,
+                onSale: p.onSale,
+                inStock: p.inStock,
+                summary: p.summary,
+                categories: p.categories,
+                specs: Object.entries(p.attributes).map(([label, options]) => ({
+                  label,
+                  value: options.join(', ')
+                }))
+              }
+            }
+          }
+        }),
+        compareProducts: tool({
+          description:
+            "Affiche un tableau comparatif côte-à-côte de 2 à 4 produits (caractéristiques, prix, stock) via leurs woo_id. Utilise-le quand le client hésite entre plusieurs modèles. Identifie d'abord les ids via searchCatalog/recommendProducts. Le tableau s'affiche au client ; résume juste les différences clés.",
+          inputSchema: z.object({
+            productIds: z
+              .array(z.number())
+              .min(2)
+              .max(4)
+              .describe('woo_id des produits à comparer (2 à 4).')
+          }),
+          execute: async ({ productIds }) => {
+            const fetched = await Promise.all(productIds.map(id => getWooProduct(id)))
+            const products = fetched.filter(
+              (p): p is NonNullable<typeof p> => Boolean(p)
+            )
+            if (products.length < 2) return { count: products.length, products: [], specs: [] }
+
+            // Union of attribute names across products, preserving first-seen order.
+            const labels: string[] = []
+            for (const p of products)
+              for (const label of Object.keys(p.attributes))
+                if (!labels.includes(label)) labels.push(label)
+
+            const specs = labels.map(label => ({
+              label,
+              values: products.map(p => p.attributes[label]?.join(', ') ?? null)
+            }))
+
+            return {
+              count: products.length,
+              products: products.map(p => ({
+                id: p.id,
+                name: p.name,
+                url: localizeUrl(p.url, locale),
+                image: p.image,
+                price: p.price,
+                regularPrice: p.regularPrice,
+                onSale: p.onSale,
+                inStock: p.inStock
+              })),
+              specs
+            }
           }
         })
       }

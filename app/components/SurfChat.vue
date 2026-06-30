@@ -122,6 +122,7 @@ function send(text: string) {
       body: {
         productContext: productContext.value,
         conversationId: conversationId.value,
+        locale: locale.value,
       },
     },
   );
@@ -163,6 +164,12 @@ function productsFromPart(part: unknown): BoardCard[] {
   return (
     (part as { output?: { products?: BoardCard[] } }).output?.products ?? []
   );
+}
+
+// Tool-result parts carry their payload under `output` once resolved; cast past
+// the loose slot typing so the dedicated renderers receive it.
+function partOutput(part: unknown): any {
+  return (part as { output?: unknown }).output;
 }
 </script>
 
@@ -386,6 +393,66 @@ function productsFromPart(part: unknown): BoardCard[] {
               </UBlogPost>
             </div>
           </template>
+
+          <!-- Size advisor: indicator while computing, then volume card -->
+          <div
+            v-else-if="
+              part.type === 'tool-sizeAdvisor' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.sizing')" />
+          </div>
+          <ChatSizeAdvice
+            v-else-if="
+              part.type === 'tool-sizeAdvisor' && !isToolStreaming(part)
+            "
+            :data="partOutput(part)"
+          />
+
+          <!-- Comparison: indicator while fetching, then side-by-side table -->
+          <div
+            v-else-if="
+              part.type === 'tool-compareProducts' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.comparing')" />
+          </div>
+          <ChatCompareTable
+            v-else-if="
+              part.type === 'tool-compareProducts' && !isToolStreaming(part)
+            "
+            :data="partOutput(part)"
+          />
+
+          <!-- Product detail: indicator while loading, then deep-dive card -->
+          <div
+            v-else-if="
+              part.type === 'tool-getProductDetails' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.loadingDetails')" />
+          </div>
+          <ChatProductDetail
+            v-else-if="
+              part.type === 'tool-getProductDetails' && !isToolStreaming(part)
+            "
+            :data="partOutput(part)"
+          />
         </template>
       </template>
 
