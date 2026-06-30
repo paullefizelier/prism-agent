@@ -252,6 +252,14 @@ async function copy(text: string) {
           </UBadge>
           <div class="ms-auto flex items-center gap-2">
             <UButton
+              :to="`/admin/lead/${l.id}`"
+              :label="$t('admin.leads.details')"
+              icon="i-lucide-eye"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+            />
+            <UButton
               :href="mailtoHref(l)"
               :label="$t('admin.leads.reply')"
               icon="i-lucide-reply"

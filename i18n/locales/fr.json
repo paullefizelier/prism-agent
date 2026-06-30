@@ -105,6 +105,10 @@
       "statusUpdated": "Statut mis à jour",
       "error": "Échec de l'opération",
       "reply": "Répondre",
+      "details": "Détails",
+      "contact": "Coordonnées",
+      "requestDetail": "Demande",
+      "conversation": "Conversation liée",
       "replySubject": "Votre demande — Prism Surfboards",
       "replyBody": "Bonjour {name},\n\nMerci pour votre message. ",
       "status": {

@@ -105,6 +105,10 @@
       "statusUpdated": "Status updated",
       "error": "Operation failed",
       "reply": "Reply",
+      "details": "Details",
+      "contact": "Contact",
+      "requestDetail": "Request",
+      "conversation": "Linked conversation",
       "replySubject": "Your request — Prism Surfboards",
       "replyBody": "Hi {name},\n\nThanks for your message. ",
       "status": {
