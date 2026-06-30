@@ -212,7 +212,7 @@ function cartUrl(board: BoardCard): string {
   try {
     const origin = new URL(board.url).origin;
     const prefix = locale.value === "en" ? "/en" : "";
-    return `${origin}${prefix}/cart/?add-to-cart=${board.id}`;
+    return `${origin}${prefix}/panier/?add-to-cart=${board.id}`;
   } catch {
     return board.url;
   }
