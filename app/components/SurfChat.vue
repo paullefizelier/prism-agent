@@ -228,36 +228,58 @@ function goToProduct(board: BoardCard) {
 // it replies with prism-add-to-cart-result (and navigates to the product page
 // itself if the item needs options). Full-screen we just open the cart URL.
 const addingId = ref<number>();
-function addToCart(board: BoardCard) {
+// Resolvers keyed by productId so a multi-add can wait for each item's result.
+const cartResolvers = new Map<number, () => void>();
+
+// Post one add-to-cart to the first-party bridge; resolves when it replies
+// (prism-add-to-cart-result) or after a safety timeout. Full-screen: open the
+// cart URL directly (no bridge).
+function postAddToCart(board: BoardCard): Promise<void> {
   if (!props.embedded) {
     openUrl(cartUrl(board));
-    return;
+    return Promise.resolve();
   }
-  try {
-    const wcOrigin = new URL(board.url).origin;
-    addingId.value = board.id;
+  return new Promise<void>((resolve) => {
+    let wcOrigin: string;
+    try {
+      wcOrigin = new URL(board.url).origin;
+    } catch {
+      openUrl(cartUrl(board));
+      resolve();
+      return;
+    }
+    const finish = () => {
+      cartResolvers.delete(board.id);
+      resolve();
+    };
+    cartResolvers.set(board.id, finish);
     window.parent.postMessage(
       { type: "prism-add-to-cart", productId: board.id, productUrl: board.url },
       wcOrigin,
     );
-    // Clear the spinner even if the bridge never answers (old loader, etc.).
-    window.setTimeout(() => {
-      if (addingId.value === board.id) addingId.value = undefined;
-    }, 6000);
-  } catch {
-    openUrl(cartUrl(board));
-  }
+    window.setTimeout(finish, 8000);
+  });
 }
-// Agent-driven add (addToCart tool, after the visitor taps confirm): reuse the
-// per-product bridge for each item.
-function addProductsToCart(products: { id: number; url: string }[]) {
-  for (const p of products) addToCart(p as BoardCard);
+
+function addToCart(board: BoardCard) {
+  addingId.value = board.id;
+  void postAddToCart(board).finally(() => {
+    if (addingId.value === board.id) addingId.value = undefined;
+  });
+}
+
+// Agent-driven add (addToCart tool, after the visitor taps confirm). Sequential
+// on purpose: firing the WooCommerce add_to_cart calls in parallel races on the
+// cart session and only one item sticks — we wait for each before the next.
+async function addProductsToCart(products: { id: number; url: string }[]) {
+  for (const p of products) await postAddToCart(p as BoardCard);
 }
 
 function onCartMessage(e: MessageEvent) {
   const d = e.data as { type?: string; ok?: boolean; productId?: number };
   if (!d || d.type !== "prism-add-to-cart-result") return;
   if (addingId.value === d.productId) addingId.value = undefined;
+  if (d.productId != null) cartResolvers.get(d.productId)?.();
   if (d.ok)
     toast.add({ title: t("product.addedToCart"), icon: "i-lucide-check" });
 }
