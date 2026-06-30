@@ -1,6 +1,9 @@
-# Build scripts are ignored by default in pnpm 10+. Only the packages listed here
-# may run their install/build scripts. `sharp` (used by @nuxt/image) needs it to
-# fetch its native libvips binary; the others ship prebuilt platform binaries and
-# don't need a build step.
+# Build scripts are ignored by default in pnpm 10+, and in CI pnpm errors unless
+# every dependency with a build script is explicitly listed here. These all ship
+# native binaries / build steps and are safe to build.
 onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
   - sharp
+  - unrs-resolver
+  - vue-demi
