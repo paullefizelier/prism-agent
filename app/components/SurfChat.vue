@@ -217,10 +217,17 @@ function cartUrl(board: BoardCard): string {
     return board.url;
   }
 }
-function addToCart(board: BoardCard) {
-  const url = cartUrl(board);
+// Embedded: navigate the host (WC) tab so the visitor's real session is used.
+// Full-screen app: open in a new tab so the chat stays put.
+function openUrl(url: string) {
   if (props.embedded) (window.top ?? window).location.href = url;
   else window.open(url, "_blank");
+}
+function goToProduct(board: BoardCard) {
+  openUrl(board.url);
+}
+function addToCart(board: BoardCard) {
+  openUrl(cartUrl(board));
 }
 
 // Tool-result parts carry their payload under `output` once resolved; cast past
@@ -368,13 +375,11 @@ function partOutput(part: unknown): any {
               <UBlogPost
                 v-for="board in productsFromPart(part)"
                 :key="board.id"
-                :to="board.url"
                 :title="board.name"
                 :description="board.summary"
                 :image="board.image ?? undefined"
-                :target="embedded ? '_top' : '_blank'"
-                rel="noopener"
-                class="transition-shadow hover:shadow-lg"
+                class="cursor-pointer transition-shadow hover:shadow-lg"
+                @click="goToProduct(board)"
                 :ui="{
                   header: embedded ? 'aspect-video' : 'aspect-square',
                   root: 'flex flex-col justify-between',
