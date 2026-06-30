@@ -9,7 +9,15 @@
     "kitHeading": "Complete your setup",
     "kitLeash": "Leash",
     "kitWax": "Wax",
-    "kitBag": "Boardbag"
+    "kitBag": "Boardbag",
+    "checkingStock": "Checking stock…",
+    "checkingInfo": "Checking shop info…",
+    "sizesTitle": "Available sizes",
+    "unitsLeft": "Only {count} left in stock",
+    "sendingRequest": "Saving your request…",
+    "customShapeSent": "Custom order request sent 🤙",
+    "customShapeNote": "The Prism team will get back to you shortly to refine your project.",
+    "customShapeError": "Sending failed, please try again in a moment."
   },
   "common": {
     "copy": "Copy",

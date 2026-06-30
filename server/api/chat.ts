@@ -11,7 +11,8 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 import { embedQuery } from '../utils/embeddings'
 import { matchesType } from '../utils/categories'
 import { persistConversation } from '../utils/conversations'
-import { getWooProduct } from '../utils/woo'
+import { getWooProduct, getWooAvailability } from '../utils/woo'
+import { getShopInfo, type ShopInfoTopic } from '../utils/shopInfo'
 import { localizeUrl } from '../utils/weglot'
 
 // Surfboard volume guide: recommended litres ≈ bodyweight × a skill-based factor,
@@ -110,6 +111,9 @@ OUTILS COMPLÉMENTAIRES
 - getProductDetails : pour détailler UN modèle précis qui intéresse le client (caractéristiques complètes, description). La fiche s'affiche au client.
 - compareProducts : quand le client hésite entre 2 à 4 modèles, affiche un tableau comparatif. Identifie d'abord les ids via searchCatalog.
 - completeTheKit : une fois une planche choisie, propose l'équipement complémentaire (leash dimensionné, wax selon l'eau, housse). Passe-lui le boardId de la planche (et waterTemp si tu la connais). Il affiche une checklist + les accessoires.
+- checkAvailability : pour vérifier le stock temps réel d'un modèle ou la disponibilité d'une taille précise.
+- shopInfo : pour toute question de politique/SAV (livraison, retours, garantie, entretien, délais sur-mesure, paiement, contact). Si l'info n'est pas disponible, NE l'invente PAS — propose de mettre le client en relation avec l'équipe Prism.
+- requestCustomShape : pour une demande de planche sur-mesure. Recueille d'abord le nom, l'email et un brief (gabarit, niveau, vagues, style, budget), puis enregistre la demande.
 - Ces outils affichent eux-mêmes leur résultat au client : commente brièvement, ne recopie pas tout le contenu.
 
 UPSELL / CROSS-SELL — SUBTIL ET HONNÊTE
@@ -128,15 +132,25 @@ export default defineLazyEventHandler(async () => {
   return defineEventHandler(async (event) => {
     const { messages, productContext, conversationId, locale } = await readBody<{
       messages: UIMessage[]
-      productContext?: { id?: number, name?: string }
+      productContext?: {
+        type?: 'product' | 'category'
+        id?: number
+        name?: string
+        categoryName?: string
+        categorySlug?: string
+      }
       conversationId?: string
       locale?: string
     }>(event)
 
-    // The widget can tell the agent which board the visitor is currently viewing.
-    const contextNote = productContext?.name
-      ? `\n\nCONTEXTE: le visiteur consulte actuellement la fiche produit "${productContext.name}"${productContext.id ? ` (id ${productContext.id})` : ''}. Tiens-en compte.`
-      : ''
+    // The widget passes the page the visitor is on (product or category) so the
+    // agent can tailor its recommendations.
+    let contextNote = ''
+    if (productContext?.type === 'category' && productContext.categoryName) {
+      contextNote = `\n\nCONTEXTE: le visiteur navigue dans la catégorie "${productContext.categoryName}". Oriente tes recommandations vers cette catégorie quand c'est pertinent (commence par y chercher).`
+    } else if (productContext?.name) {
+      contextNote = `\n\nCONTEXTE: le visiteur consulte actuellement la fiche produit "${productContext.name}"${productContext.id ? ` (id ${productContext.id})` : ''}. Tiens-en compte.`
+    }
 
     const result = streamText({
       model: google(config.aiModel),
@@ -442,6 +456,69 @@ export default defineLazyEventHandler(async () => {
               }))
 
             return { guidance, products }
+          }
+        }),
+        checkAvailability: tool({
+          description:
+            "Vérifie le stock temps réel d'un produit et, pour les produits à tailles/variations, la disponibilité de chaque taille. Utilise-le quand le client demande si un modèle ou une taille est dispo. Le résultat s'affiche au client.",
+          inputSchema: z.object({
+            productId: z.number().describe('woo_id du produit.')
+          }),
+          execute: async ({ productId }) => {
+            const a = await getWooAvailability(productId)
+            if (!a) return { found: false }
+            return {
+              found: true,
+              availability: { ...a, url: localizeUrl(a.url, locale) }
+            }
+          }
+        }),
+        shopInfo: tool({
+          description:
+            "Renvoie les informations officielles de la boutique (livraison, retours, garantie, entretien, délais sur-mesure, paiement, contact). Utilise-le pour toute question de politique/SAV. Si l'info n'est pas disponible (available=false), ne l'invente PAS : propose de mettre le client en relation avec l'équipe Prism.",
+          inputSchema: z.object({
+            topic: z
+              .enum([
+                'shipping',
+                'returns',
+                'warranty',
+                'care',
+                'customLeadTime',
+                'payment',
+                'contact'
+              ])
+              .describe('Sujet de la question.')
+          }),
+          execute: async ({ topic }) => getShopInfo(topic as ShopInfoTopic, locale)
+        }),
+        requestCustomShape: tool({
+          description:
+            "Enregistre une demande de planche sur-mesure (made-to-order) pour un handoff à l'équipe Prism. À appeler UNIQUEMENT après avoir recueilli le nom, l'email et un brief (gabarit, niveau, type de vagues, style, budget…). Le téléphone est optionnel. Une confirmation s'affiche au client.",
+          inputSchema: z.object({
+            name: z.string().describe('Nom du client.'),
+            email: z.string().describe('Email du client.'),
+            phone: z.string().describe('Téléphone (optionnel).').optional(),
+            details: z
+              .string()
+              .describe(
+                'Brief du projet : gabarit, niveau, vagues, style, budget, dimensions souhaitées…'
+              )
+          }),
+          execute: async ({ name, email, phone, details }) => {
+            const supabase = serverSupabaseServiceRole<any>(event)
+            const { error } = await supabase.from('custom_shape_requests').insert({
+              name,
+              email,
+              phone: phone ?? null,
+              details,
+              product_context: productContext ?? null,
+              conversation_id: conversationId ?? null
+            })
+            if (error) {
+              console.error('[custom_shape_requests] insert failed:', error.message)
+              return { ok: false }
+            }
+            return { ok: true, name }
           }
         })
       }

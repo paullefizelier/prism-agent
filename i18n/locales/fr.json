@@ -9,7 +9,15 @@
     "kitHeading": "Compléter ton équipement",
     "kitLeash": "Leash",
     "kitWax": "Wax",
-    "kitBag": "Housse"
+    "kitBag": "Housse",
+    "checkingStock": "Je vérifie le stock…",
+    "checkingInfo": "Je vérifie les infos boutique…",
+    "sizesTitle": "Tailles disponibles",
+    "unitsLeft": "Plus que {count} en stock",
+    "sendingRequest": "J'enregistre ta demande…",
+    "customShapeSent": "Demande de sur-mesure envoyée 🤙",
+    "customShapeNote": "L'équipe Prism te recontacte très vite pour affiner ton projet.",
+    "customShapeError": "L'envoi a échoué, réessaie dans un instant."
   },
   "common": {
     "copy": "Copier",

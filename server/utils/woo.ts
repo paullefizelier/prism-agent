@@ -140,3 +140,71 @@ export async function getWooProduct(id: number): Promise<BoardCard | null> {
     return null
   }
 }
+
+/** Real-time stock for a product, including per-variation (size) availability. */
+export interface ProductAvailability {
+  id: number
+  name: string
+  url: string
+  type: string
+  inStock: boolean
+  stockQuantity: number | null
+  variations: {
+    id: number
+    label: string
+    inStock: boolean
+    stockQuantity: number | null
+  }[]
+}
+
+// Live availability check: the synced catalog can lag, so this hits WooCommerce
+// directly. For variable products it also pulls each variation's stock.
+export async function getWooAvailability(
+  id: number
+): Promise<ProductAvailability | null> {
+  const config = useRuntimeConfig()
+  if (!config.wooUrl || !config.wooKey || !config.wooSecret) {
+    throw new Error('WooCommerce credentials are not configured')
+  }
+  const auth = btoa(`${config.wooKey}:${config.wooSecret}`)
+  const base = config.wooUrl.replace(/\/$/, '')
+  try {
+    const p = await $fetch<
+      WooProductRaw & { type: string, stock_quantity: number | null }
+    >(`${base}/wp-json/wc/v3/products/${id}`, {
+      headers: { Authorization: `Basic ${auth}` }
+    })
+
+    let variations: ProductAvailability['variations'] = []
+    if (p.type === 'variable') {
+      const raw = await $fetch<
+        Array<{
+          id: number
+          attributes: { name: string, option: string }[]
+          stock_status: string
+          stock_quantity: number | null
+        }>
+      >(`${base}/wp-json/wc/v3/products/${id}/variations?per_page=100`, {
+        headers: { Authorization: `Basic ${auth}` }
+      })
+      variations = raw.map(v => ({
+        id: v.id,
+        label: v.attributes.map(a => a.option).join(' · ') || `#${v.id}`,
+        inStock: v.stock_status === 'instock',
+        stockQuantity: v.stock_quantity ?? null
+      }))
+    }
+
+    return {
+      id: p.id,
+      name: p.name,
+      url: p.permalink,
+      type: p.type,
+      inStock: p.stock_status === 'instock',
+      stockQuantity: p.stock_quantity ?? null,
+      variations
+    }
+  } catch {
+    return null
+  }
+}

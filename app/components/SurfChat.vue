@@ -29,16 +29,27 @@ interface BoardCard {
   image: string | null;
 }
 
-// Product the visitor is viewing, passed by the widget loader via the iframe URL.
+// Page the visitor is on, passed by the widget loader via the iframe URL:
+// a product page (id + name) or a category page (name + slug).
 const route = useRoute();
 const productContext = computed(() => {
-  const id = Number(route.query.productId);
-  const name =
-    typeof route.query.productName === "string"
-      ? route.query.productName
-      : undefined;
+  const q = route.query;
+  if (q.ctxType === "category") {
+    const categoryName =
+      typeof q.categoryName === "string" ? q.categoryName : undefined;
+    const categorySlug =
+      typeof q.categorySlug === "string" ? q.categorySlug : undefined;
+    if (!categoryName && !categorySlug) return undefined;
+    return { type: "category" as const, categoryName, categorySlug };
+  }
+  const id = Number(q.productId);
+  const name = typeof q.productName === "string" ? q.productName : undefined;
   if (!name && !id) return undefined;
-  return { id: Number.isFinite(id) ? id : undefined, name };
+  return {
+    type: "product" as const,
+    id: Number.isFinite(id) ? id : undefined,
+    name,
+  };
 });
 
 const { messages, sendMessage, status, stop, regenerate, error, clearError } =
@@ -82,6 +93,10 @@ function loadConversation(id: string | null) {
 }
 
 onMounted(() => {
+  // Open in the page's language when the widget loader passes ?lang=.
+  const lang = route.query.lang;
+  if ((lang === "fr" || lang === "en") && lang !== locale.value) setLocale(lang);
+
   history.load();
   // Deep-link: restore the conversation named in ?c=<id> if it's stored here.
   const c = typeof route.query.c === "string" ? route.query.c : undefined;
@@ -493,6 +508,58 @@ function partOutput(part: unknown): any {
           <ChatKitChecklist
             v-else-if="
               part.type === 'tool-completeTheKit' && !isToolStreaming(part)
+            "
+            :data="partOutput(part)"
+          />
+
+          <!-- Availability: indicator while checking, then stock + sizes -->
+          <div
+            v-else-if="
+              part.type === 'tool-checkAvailability' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.checkingStock')" />
+          </div>
+          <ChatAvailability
+            v-else-if="
+              part.type === 'tool-checkAvailability' && !isToolStreaming(part)
+            "
+            :data="partOutput(part)"
+          />
+
+          <!-- Shop info: discreet indicator only (the answer is the model's prose) -->
+          <div
+            v-else-if="part.type === 'tool-shopInfo' && isToolStreaming(part)"
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.checkingInfo')" />
+          </div>
+
+          <!-- Custom shape request: indicator while saving, then confirmation -->
+          <div
+            v-else-if="
+              part.type === 'tool-requestCustomShape' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.sendingRequest')" />
+          </div>
+          <ChatCustomShapeConfirm
+            v-else-if="
+              part.type === 'tool-requestCustomShape' && !isToolStreaming(part)
             "
             :data="partOutput(part)"
           />
