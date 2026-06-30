@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useChat } from "@ai-sdk/vue";
 import { computed, ref } from "vue";
+import { isPartStreaming, isToolStreaming } from "@nuxt/ui/utils/ai";
 
 definePageMeta({ layout: "embed" });
 
@@ -51,11 +52,6 @@ function send(text: string) {
 
 function boardsFromPart(part: unknown): BoardCard[] {
   return (part as { output?: { boards?: BoardCard[] } }).output?.boards ?? [];
-}
-
-// AI SDK tool-part states: input-streaming | input-available | output-available | output-error
-function toolStreaming(state: string): boolean {
-  return state !== "output-available" && state !== "output-error";
 }
 </script>
 
@@ -111,29 +107,33 @@ function toolStreaming(state: string): boolean {
       :assistant="{ avatar: { icon: 'i-lucide-waves' } }"
       :user="{ side: 'right', variant: 'soft' }"
     >
-      <template #content="{ parts }">
+      <template #content="{ parts, role }">
         <template v-for="(part, index) in parts" :key="index">
           <!-- Reasoning (if the model emits any) -->
           <UChatReasoning
             v-if="part.type === 'reasoning'"
             :text="part.text"
-            :streaming="status === 'streaming'"
+            :streaming="isPartStreaming(part)"
             class="mb-2"
           />
 
-          <!-- Text -->
-          <UChatMessage
-            v-else-if="part.type === 'text'"
-            class="whitespace-pre-wrap"
-          >
-            {{ part.text }}
-          </UChatMessage>
+          <!-- Text: markdown for the assistant, plain for the user -->
+          <template v-else-if="part.type === 'text'">
+            <ChatComark
+              v-if="role === 'assistant'"
+              :markdown="part.text"
+              :streaming="isPartStreaming(part)"
+            />
+            <p v-else class="whitespace-pre-wrap">
+              {{ part.text }}
+            </p>
+          </template>
 
           <!-- Catalog search: discreet indicator while running, then product cards -->
           <template v-else-if="part.type === 'tool-searchBoards'">
             <!-- Searching -->
             <div
-              v-if="toolStreaming(part.state)"
+              v-if="isToolStreaming(part)"
               class="flex items-center gap-2 my-1 text-sm text-muted"
             >
               <UIcon
@@ -152,14 +152,17 @@ function toolStreaming(state: string): boolean {
                 Aucune planche ne correspond pour l'instant — affinons ta
                 recherche.
               </p>
-              <div v-else class="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div
+                v-else
+                class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              >
                 <UBlogPost
                   v-for="board in boardsFromPart(part)"
                   :key="board.id"
                   :to="board.url"
                   :title="board.name"
                   :description="board.summary"
-                  :image="board.image"
+                  :image="board.image ?? undefined"
                   target="_blank"
                   rel="noopener"
                   :ui="{
@@ -227,12 +230,24 @@ function toolStreaming(state: string): boolean {
                     </span>
                   </div> -->
                   <template #footer>
-                    <div class="flex">
-                      <h3>
-                        {{ board.price }}
-                        {{ board.salePrice ? `(${board.salePrice})` : "" }}
-                        {{ board }}
-                      </h3>
+                    <div class="flex flex-col">
+                      <div class="flex items-baseline gap-2">
+                        <span class="font-semibold text-base">
+                          {{ board.price }} €
+                        </span>
+                        <span
+                          v-if="board.onSale && board.regularPrice"
+                          class="text-sm text-muted line-through"
+                        >
+                          {{ board.regularPrice }} €
+                        </span>
+                      </div>
+                      <span
+                        class="text-xs font-medium"
+                        :class="board.inStock ? 'text-success' : 'text-muted'"
+                      >
+                        {{ board.inStock ? "En stock" : "Épuisé" }}
+                      </span>
                     </div>
                     <div class="flex items-center gap-2">
                       <UButton
@@ -253,7 +268,7 @@ function toolStreaming(state: string): boolean {
           <!-- Single board detail lookup: only a discreet indicator while loading -->
           <div
             v-else-if="
-              part.type === 'tool-getBoardDetails' && toolStreaming(part.state)
+              part.type === 'tool-getBoardDetails' && isToolStreaming(part)
             "
             class="flex items-center gap-2 my-1 text-sm text-muted"
           >
