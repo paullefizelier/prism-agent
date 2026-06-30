@@ -138,6 +138,13 @@ async function copy(text: string) {
       </UBadge>
     </div>
 
+    <UInput
+      v-model="searchInput"
+      icon="i-lucide-search"
+      :placeholder="$t('admin.leads.search')"
+      :trailing="false"
+    />
+
     <!-- Filters -->
     <div class="space-y-2">
       <div class="flex flex-wrap items-center gap-1.5">

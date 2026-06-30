@@ -107,6 +107,7 @@
       "none": "Aucune demande pour l'instant.",
       "viewConversation": "Voir la conversation",
       "all": "Tous",
+      "search": "Rechercher (nom, email, message)…",
       "statusLabel": "Statut",
       "reasonLabel": "Motif",
       "openCount": "{count} ouverte(s)",

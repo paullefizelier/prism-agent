@@ -107,6 +107,7 @@
       "none": "No requests yet.",
       "viewConversation": "View conversation",
       "all": "All",
+      "search": "Search (name, email, message)…",
       "statusLabel": "Status",
       "reasonLabel": "Reason",
       "openCount": "{count} open",
