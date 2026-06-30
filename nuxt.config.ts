@@ -24,8 +24,7 @@ export default defineNuxtConfig({
     wooUrl: '', // NUXT_WOO_URL — e.g. https://www.prism-surfboards.com
     wooKey: '', // NUXT_WOO_KEY — WooCommerce consumer key
     wooSecret: '', // NUXT_WOO_SECRET — WooCommerce consumer secret
-    cronSecret: '', // NUXT_CRON_SECRET — guards /api/sync (match Vercel's CRON_SECRET)
-    adminEmails: '' // NUXT_ADMIN_EMAILS — comma-separated allowlist for the admin dashboard
+    cronSecret: '' // NUXT_CRON_SECRET — guards /api/sync (match Vercel's CRON_SECRET)
   },
 
   routeRules: {

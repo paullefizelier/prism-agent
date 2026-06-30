@@ -1,27 +1,23 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div>
     <UHeader>
       <template #left>
         <NuxtLink to="/">
-          <AppLogo class="w-auto h-6 shrink-0" />
+          <NuxtImg
+            src="/logo-prism-surfboards.png.webp"
+            class="w-auto h-12 shrink-0"
+            format="webp"
+          />
         </NuxtLink>
-
-        <TemplateMenu />
       </template>
 
       <template #right>
-        <UColorModeButton />
-
         <UButton
-          to="https://github.com/nuxt-ui-templates/starter"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
-          color="neutral"
-          variant="ghost"
+          href="https://www.prism-surfboards.com"
+          trailing-icon="i-lucide-arrow-up-right"
+          label="Accéder au site"
         />
       </template>
     </UHeader>
