@@ -4,6 +4,6 @@
 // (No syntax-highlight plugin: this advisor doesn't output code. Add
 //  `plugins: [highlight({ languages: [...] })]` here later if ever needed.)
 export default defineComarkComponent({
-  name: "ChatComark",
-  class: "*:first:mt-0 *:last:mb-0",
-});
+  name: 'ChatComark',
+  class: '*:first:mt-0 *:last:mb-0'
+})

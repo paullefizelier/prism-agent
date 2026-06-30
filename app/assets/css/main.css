@@ -2,7 +2,7 @@
 @import "@nuxt/ui";
 
 @theme static {
-  --font-sans: "Public Sans", sans-serif;
+  --font-sans: "Montserrat", sans-serif;
   --font-display: "Montserrat", sans-serif;
 
   --color-prism-primary-50: #e6e8eb;

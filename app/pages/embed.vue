@@ -1,57 +1,66 @@
 <script setup lang="ts">
-import { useChat } from "@ai-sdk/vue";
-import { computed, ref } from "vue";
-import { isPartStreaming, isToolStreaming } from "@nuxt/ui/utils/ai";
+import { useChat } from '@ai-sdk/vue'
+import { computed, ref } from 'vue'
+import { isPartStreaming, isToolStreaming } from '@nuxt/ui/utils/ai'
 
-definePageMeta({ layout: "embed" });
+definePageMeta({ layout: 'embed' })
 
 interface BoardCard {
-  id: number;
-  name: string;
-  url: string;
-  price: string;
-  regularPrice: string;
-  onSale: boolean;
-  inStock: boolean;
-  summary: string;
-  image: string | null;
+  id: number
+  name: string
+  url: string
+  price: string
+  regularPrice: string
+  onSale: boolean
+  inStock: boolean
+  summary: string
+  image: string | null
 }
 
 // Product the visitor is viewing, passed by the widget loader via the iframe URL.
-const route = useRoute();
+const route = useRoute()
 const productContext = computed(() => {
-  const id = Number(route.query.productId);
-  const name =
-    typeof route.query.productName === "string"
+  const id = Number(route.query.productId)
+  const name
+    = typeof route.query.productName === 'string'
       ? route.query.productName
-      : undefined;
-  if (!name && !id) return undefined;
-  return { id: Number.isFinite(id) ? id : undefined, name };
-});
+      : undefined
+  if (!name && !id) return undefined
+  return { id: Number.isFinite(id) ? id : undefined, name }
+})
 
-const { messages, sendMessage, status, stop, regenerate } = useChat();
+const { messages, sendMessage, status, stop, regenerate } = useChat()
 
-const input = ref("");
+const input = ref('')
+
+// Stable id per conversation (created lazily, client-side, on first send).
+const conversationId = ref<string>()
 
 const suggestions = [
-  "Je débute, quelle planche choisir ?",
-  "Quelle taille pour 75 kg en vagues molles ?",
-  "Une planche performance pour rider confirmé ?",
-];
+  'Je débute, quelle planche choisir ?',
+  'Quelle taille pour 75 kg en vagues molles ?',
+  'Une planche performance pour rider confirmé ?'
+]
 
 function send(text: string) {
-  const value = text.trim();
-  if (!value || status.value === "submitted" || status.value === "streaming")
-    return;
+  const value = text.trim()
+  if (!value || status.value === 'submitted' || status.value === 'streaming')
+    return
+  if (!conversationId.value) conversationId.value = crypto.randomUUID()
   sendMessage(
     { text: value },
-    { body: { productContext: productContext.value } },
-  );
-  input.value = "";
+    {
+      body: {
+        productContext: productContext.value,
+        conversationId: conversationId.value
+      }
+    }
+  )
+  input.value = ''
 }
 
 function boardsFromPart(part: unknown): BoardCard[] {
-  return (part as { output?: { boards?: BoardCard[] } }).output?.boards ?? [];
+  return (part as { output?: { boards?: BoardCard[] } }).output?.boards ?? []
 }
 </script>
 
@@ -61,9 +70,14 @@ function boardsFromPart(part: unknown): BoardCard[] {
     <header
       class="flex items-center gap-3 px-4 py-3 border-b border-default shrink-0"
     >
-      <UIcon name="i-lucide-waves" class="size-6 text-primary" />
+      <UIcon
+        name="i-lucide-waves"
+        class="size-6 text-primary"
+      />
       <div>
-        <p class="font-semibold leading-tight">Prism Surf Advisor</p>
+        <p class="font-semibold leading-tight">
+          Prism Surf Advisor
+        </p>
         <p class="text-xs text-muted leading-tight">
           Conseiller IA • choix de planche
         </p>
@@ -75,7 +89,10 @@ function boardsFromPart(part: unknown): BoardCard[] {
       v-if="messages.length === 0"
       class="flex-1 flex flex-col items-center justify-center text-center gap-4 px-4"
     >
-      <UIcon name="i-lucide-waves" class="size-10 text-primary" />
+      <UIcon
+        name="i-lucide-waves"
+        class="size-10 text-primary"
+      />
       <div>
         <p class="font-medium">
           Salut ! 🤙 Je t'aide à trouver ta planche idéale.
@@ -108,7 +125,10 @@ function boardsFromPart(part: unknown): BoardCard[] {
       :user="{ side: 'right', variant: 'soft' }"
     >
       <template #content="{ parts, role }">
-        <template v-for="(part, index) in parts" :key="index">
+        <template
+          v-for="(part, index) in parts"
+          :key="index"
+        >
           <!-- Reasoning (if the model emits any) -->
           <UChatReasoning
             v-if="part.type === 'reasoning'"
@@ -124,7 +144,10 @@ function boardsFromPart(part: unknown): BoardCard[] {
               :markdown="part.text"
               :streaming="isPartStreaming(part)"
             />
-            <p v-else class="whitespace-pre-wrap">
+            <p
+              v-else
+              class="whitespace-pre-wrap"
+            >
               {{ part.text }}
             </p>
           </template>
@@ -144,7 +167,10 @@ function boardsFromPart(part: unknown): BoardCard[] {
             </div>
 
             <!-- Results -->
-            <div v-else class="my-2 space-y-2">
+            <div
+              v-else
+              class="my-2 space-y-2"
+            >
               <p
                 v-if="boardsFromPart(part).length === 0"
                 class="text-sm text-muted italic"
@@ -170,7 +196,7 @@ function boardsFromPart(part: unknown): BoardCard[] {
                     root: 'flex flex-col justify-between',
                     footer:
                       'flex items-center gap-2 p-4 sm:p-6 border-t border-default justify-between',
-                    body: 'flex-1',
+                    body: 'flex-1'
                   }"
                 >
                   <template #header>

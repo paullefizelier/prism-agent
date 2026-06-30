@@ -3,14 +3,15 @@ import {
   tool,
   stepCountIs,
   convertToModelMessages,
-  type UIMessage,
-} from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { z } from "zod";
-import { serverSupabaseServiceRole } from "#supabase/server";
-import { getWooProduct } from "../utils/woo";
-import { embedQuery } from "../utils/embeddings";
-import { isBoard } from "../utils/categories";
+  type UIMessage
+} from 'ai'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { z } from 'zod'
+import { serverSupabaseServiceRole } from '#supabase/server'
+import { getWooProduct } from '../utils/woo'
+import { embedQuery } from '../utils/embeddings'
+import { isBoard } from '../utils/categories'
+import { persistConversation } from '../utils/conversations'
 
 const SYSTEM_PROMPT = `Tu es le conseiller IA de Prism Surfboards (https://www.prism-surfboards.com), un shaper de planches de surf.
 
@@ -33,24 +34,25 @@ UPSELL / CROSS-SELL — SUBTIL ET HONNÊTE
 - Jamais de pression commerciale. Si un modèle moins cher convient mieux, dis-le.
 
 STYLE
-- Concis, concret, amical. Pose une question de clarification si le besoin est flou (niveau ? gabarit ? type de vagues ?).`;
+- Concis, concret, amical. Pose une question de clarification si le besoin est flou (niveau ? gabarit ? type de vagues ?).`
 
 export default defineLazyEventHandler(async () => {
-  const config = useRuntimeConfig();
-  if (!config.googleApiKey) throw new Error("Missing NUXT_GOOGLE_API_KEY");
+  const config = useRuntimeConfig()
+  if (!config.googleApiKey) throw new Error('Missing NUXT_GOOGLE_API_KEY')
 
-  const google = createGoogleGenerativeAI({ apiKey: config.googleApiKey });
+  const google = createGoogleGenerativeAI({ apiKey: config.googleApiKey })
 
   return defineEventHandler(async (event) => {
-    const { messages, productContext } = await readBody<{
-      messages: UIMessage[];
-      productContext?: { id?: number; name?: string };
-    }>(event);
+    const { messages, productContext, conversationId } = await readBody<{
+      messages: UIMessage[]
+      productContext?: { id?: number, name?: string }
+      conversationId?: string
+    }>(event)
 
     // The widget can tell the agent which board the visitor is currently viewing.
     const contextNote = productContext?.name
-      ? `\n\nCONTEXTE: le visiteur consulte actuellement la fiche produit "${productContext.name}"${productContext.id ? ` (id ${productContext.id})` : ""}. Tiens-en compte.`
-      : "";
+      ? `\n\nCONTEXTE: le visiteur consulte actuellement la fiche produit "${productContext.name}"${productContext.id ? ` (id ${productContext.id})` : ''}. Tiens-en compte.`
+      : ''
 
     const result = streamText({
       model: google(config.aiModel),
@@ -60,96 +62,109 @@ export default defineLazyEventHandler(async () => {
       // Once the catalog has been searched once, force a text answer (no more tool
       // calls) so the model uses those results instead of firing repeated searches.
       prepareStep: ({ steps }) => {
-        const alreadySearched = steps.some((s) =>
-          s.toolCalls.some((c) => c.toolName === "searchBoards"),
-        );
-        return alreadySearched ? { toolChoice: "none" } : {};
+        const alreadySearched = steps.some(s =>
+          s.toolCalls.some(c => c.toolName === 'searchBoards')
+        )
+        return alreadySearched ? { toolChoice: 'none' } : {}
       },
       tools: {
         searchBoards: tool({
           description:
-            "Recherche sémantique dans le catalogue Prism. Utilise-le dès que tu veux recommander des planches. La recherche est vectorielle : une phrase descriptive du besoin marche mieux que de simples mots-clés.",
+            'Recherche sémantique dans le catalogue Prism. Utilise-le dès que tu veux recommander des planches. La recherche est vectorielle : une phrase descriptive du besoin marche mieux que de simples mots-clés.',
           inputSchema: z.object({
             query: z
               .string()
               .describe(
-                "Description en langage naturel du besoin : niveau, gabarit, type de vagues, style de surf (ex: \"planche pour débutant de 80kg en petites vagues molles, stable et facile à ramer\").",
+                'Description en langage naturel du besoin : niveau, gabarit, type de vagues, style de surf (ex: "planche pour débutant de 80kg en petites vagues molles, stable et facile à ramer").'
               )
               .optional(),
             category: z
               .string()
-              .describe("Slug ou id de catégorie WooCommerce, si connu.")
+              .describe('Slug ou id de catégorie WooCommerce, si connu.')
               .optional(),
             maxPrice: z
               .number()
-              .describe("Budget maximum en euros.")
+              .describe('Budget maximum en euros.')
               .optional(),
             minPrice: z
               .number()
-              .describe("Budget minimum en euros.")
-              .optional(),
+              .describe('Budget minimum en euros.')
+              .optional()
           }),
           execute: async ({ query, category, maxPrice, minPrice }) => {
-            const supabase = serverSupabaseServiceRole<any>(event);
-            const embedding = await embedQuery(query ?? "planche de surf");
+            const supabase = serverSupabaseServiceRole<any>(event)
+            const embedding = await embedQuery(query ?? 'planche de surf')
             // Fetch a wider candidate set, then keep only actual surfboards
             // (the catalog also has SUP, wetsuits, skimboards, accessories…).
-            const { data, error } = await supabase.rpc("match_products", {
+            const { data, error } = await supabase.rpc('match_products', {
               query_embedding: JSON.stringify(embedding),
               match_count: 24,
-              only_in_stock: true,
-            });
-            if (error) return { count: 0, boards: [], error: error.message };
+              only_in_stock: true
+            })
+            if (error) return { count: 0, boards: [], error: error.message }
 
-            const rows = (data ?? []) as Array<Record<string, unknown>>;
+            const rows = (data ?? []) as Array<Record<string, unknown>>
             let boards = rows
-              .map((r) => ({
+              .map(r => ({
                 id: r.woo_id as number,
                 name: r.name as string,
                 url: r.url as string,
                 price: r.price as string,
-                regularPrice: (r.regular_price as string) ?? "",
+                regularPrice: (r.regular_price as string) ?? '',
                 onSale: Boolean(r.on_sale),
                 inStock: Boolean(r.in_stock),
-                summary: (r.summary as string) ?? "",
+                summary: (r.summary as string) ?? '',
                 image: (r.image as string) ?? null,
-                categories: (r.categories as string[]) ?? [],
+                categories: (r.categories as string[]) ?? []
               }))
-              .filter((b) => isBoard(b.categories));
+              .filter(b => isBoard(b.categories))
 
             // Optional post-filters the model may request.
             if (category)
-              boards = boards.filter((b) =>
-                b.categories.some((c) =>
-                  c.toLowerCase().includes(category.toLowerCase()),
-                ),
-              );
+              boards = boards.filter(b =>
+                b.categories.some(c =>
+                  c.toLowerCase().includes(category.toLowerCase())
+                )
+              )
             if (maxPrice != null)
-              boards = boards.filter((b) => parseFloat(b.price) <= maxPrice);
+              boards = boards.filter(b => parseFloat(b.price) <= maxPrice)
             if (minPrice != null)
-              boards = boards.filter((b) => parseFloat(b.price) >= minPrice);
+              boards = boards.filter(b => parseFloat(b.price) >= minPrice)
 
             // Cap at 3: keep the suggestion grid focused, not overwhelming.
-            boards = boards.slice(0, 3);
-            return { count: boards.length, boards };
-          },
+            boards = boards.slice(0, 3)
+            return { count: boards.length, boards }
+          }
         }),
         getBoardDetails: tool({
           description:
-            "Récupère les détails complets (specs, prix, dispo) d'une planche précise par son id produit WooCommerce.",
+            'Récupère les détails complets (specs, prix, dispo) d\'une planche précise par son id produit WooCommerce.',
           inputSchema: z.object({
-            productId: z.number().describe("Id du produit WooCommerce."),
+            productId: z.number().describe('Id du produit WooCommerce.')
           }),
           execute: async ({ productId }) => {
-            const board = await getWooProduct(productId);
-            return board ?? { error: "Produit introuvable" };
-          },
-        }),
-      },
-    });
+            const board = await getWooProduct(productId)
+            return board ?? { error: 'Produit introuvable' }
+          }
+        })
+      }
+    })
 
     // Canonical helper: knows the tool set, so it propagates each tool call's
     // provider metadata (incl. Gemini's thoughtSignature) through to the client.
-    return result.toUIMessageStreamResponse();
-  });
-});
+    // originalMessages + onFinish give us the full transcript to log.
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+      onFinish: ({ messages: full }) => {
+        if (conversationId) {
+          persistConversation(
+            serverSupabaseServiceRole<any>(event),
+            conversationId,
+            full,
+            productContext
+          )
+        }
+      }
+    })
+  })
+})
