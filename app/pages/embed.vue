@@ -5,6 +5,10 @@ import { isPartStreaming, isToolStreaming } from '@nuxt/ui/utils/ai'
 
 definePageMeta({ layout: 'embed' })
 
+// Widget runs in an iframe: open every link (markdown links in answers, product
+// cards) in a new tab instead of navigating the iframe itself.
+useHead({ base: { target: '_blank' } })
+
 interface BoardCard {
   id: number
   name: string
@@ -59,8 +63,8 @@ function send(text: string) {
   input.value = ''
 }
 
-function boardsFromPart(part: unknown): BoardCard[] {
-  return (part as { output?: { boards?: BoardCard[] } }).output?.boards ?? []
+function productsFromPart(part: unknown): BoardCard[] {
+  return (part as { output?: { products?: BoardCard[] } }).output?.products ?? []
 }
 </script>
 
@@ -152,39 +156,33 @@ function boardsFromPart(part: unknown): BoardCard[] {
             </p>
           </template>
 
-          <!-- Catalog search: discreet indicator while running, then product cards -->
-          <template v-else-if="part.type === 'tool-searchBoards'">
-            <!-- Searching -->
-            <div
-              v-if="isToolStreaming(part)"
-              class="flex items-center gap-2 my-1 text-sm text-muted"
-            >
-              <UIcon
-                name="i-lucide-loader-circle"
-                class="size-4 animate-spin shrink-0"
-              />
-              <UChatShimmer text="Je parcours le catalogue Prism…" />
-            </div>
+          <!-- Catalog search: discreet indicator only (candidates are not shown) -->
+          <div
+            v-else-if="
+              part.type === 'tool-searchCatalog' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer text="Je parcours le catalogue Prism…" />
+          </div>
 
-            <!-- Results -->
+          <!-- Recommended products: clickable cards -->
+          <template
+            v-else-if="
+              part.type === 'tool-recommendProducts' && !isToolStreaming(part)
+            "
+          >
             <div
-              v-else
-              class="my-2 space-y-2"
+              v-if="productsFromPart(part).length"
+              class="my-2 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
             >
-              <p
-                v-if="boardsFromPart(part).length === 0"
-                class="text-sm text-muted italic"
-              >
-                Aucune planche ne correspond pour l'instant — affinons ta
-                recherche.
-              </p>
-              <div
-                v-else
-                class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-              >
-                <UBlogPost
-                  v-for="board in boardsFromPart(part)"
-                  :key="board.id"
+              <UBlogPost
+                v-for="board in productsFromPart(part)"
+                :key="board.id"
                   :to="board.url"
                   :title="board.name"
                   :description="board.summary"
@@ -287,23 +285,8 @@ function boardsFromPart(part: unknown): BoardCard[] {
                     </div>
                   </template>
                 </UBlogPost>
-              </div>
             </div>
           </template>
-
-          <!-- Single board detail lookup: only a discreet indicator while loading -->
-          <div
-            v-else-if="
-              part.type === 'tool-getBoardDetails' && isToolStreaming(part)
-            "
-            class="flex items-center gap-2 my-1 text-sm text-muted"
-          >
-            <UIcon
-              name="i-lucide-loader-circle"
-              class="size-4 animate-spin shrink-0"
-            />
-            <UChatShimmer text="Je consulte la fiche détaillée…" />
-          </div>
         </template>
       </template>
 

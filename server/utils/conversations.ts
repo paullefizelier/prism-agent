@@ -3,14 +3,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { UIMessage } from 'ai'
 
-// Pull the board ids surfaced by the searchBoards tool across the transcript.
+// Pull the product ids the agent recommended (via recommendProducts) across the transcript.
 function recommendedWooIds(messages: UIMessage[]): number[] {
   const ids = new Set<number>()
   for (const m of messages) {
     for (const part of m.parts) {
-      const p = part as { type: string, output?: { boards?: { id: number }[] } }
-      if (p.type === 'tool-searchBoards' && p.output?.boards) {
-        for (const b of p.output.boards) ids.add(b.id)
+      const p = part as { type: string, output?: { products?: { id: number }[] } }
+      if (p.type === 'tool-recommendProducts' && p.output?.products) {
+        for (const b of p.output.products) ids.add(b.id)
       }
     }
   }

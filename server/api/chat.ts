@@ -29,7 +29,7 @@ WORKFLOW DE RECOMMANDATION (à suivre)
 1. Appelle searchCatalog avec une description du besoin en langage naturel et le bon productType (board, sup, skimboard, wetsuit, accessory). Ses résultats te sont destinés et NE sont PAS montrés au client.
 2. Analyse les candidats et choisis les 2-3 plus pertinents (jamais une longue liste).
 3. Appelle recommendProducts avec leurs ids, dans l'ordre de préférence : ce sont eux qui s'affichent en cartes cliquables au client.
-4. Présente-les brièvement en expliquant pourquoi ils conviennent. Ne recopie pas les prix ni les URLs dans le texte (les cartes s'en chargent).
+4. Présente-les brièvement en expliquant pourquoi ils conviennent. Quand tu mentionnes un produit dans le texte, mets son nom en lien Markdown vers sa fiche : [Nom du produit](url) (utilise l'url renvoyée par searchCatalog). Ne recopie pas les prix dans le texte (les cartes s'en chargent).
 
 CHOIX DE LA PLANCHE — EXPERTISE
 - Pour un VRAI DÉBUTANT, privilégie d'abord les planches en MOUSSE (gamme STARTER SERIES / Packs Débutant), taillées au gabarit : plus sûres, plus stables, plus flottantes, parfaites pour apprendre. Ne propose les planches époxy/dures (Mini Malibu, Évolutive…) qu'ENSUITE, comme étape de progression, en l'expliquant.
@@ -64,53 +64,84 @@ export default defineLazyEventHandler(async () => {
       model: google(config.aiModel),
       system: SYSTEM_PROMPT + contextNote,
       messages: await convertToModelMessages(messages),
-      stopWhen: stepCountIs(5),
-      // Once the catalog has been searched once, force a text answer (no more tool
-      // calls) so the model uses those results instead of firing repeated searches.
-      prepareStep: ({ steps }) => {
-        const alreadySearched = steps.some(s =>
-          s.toolCalls.some(c => c.toolName === 'searchBoards')
-        )
-        return alreadySearched ? { toolChoice: 'none' } : {}
-      },
+      stopWhen: stepCountIs(8),
       tools: {
-        searchBoards: tool({
+        searchCatalog: tool({
           description:
-            'Recherche sémantique dans le catalogue Prism. Utilise-le dès que tu veux recommander des planches. La recherche est vectorielle : une phrase descriptive du besoin marche mieux que de simples mots-clés.',
+            'Recherche sémantique dans le catalogue Prism (planches, SUP/paddle, skimboards, combinaisons, accessoires). Renvoie des CANDIDATS pour ton analyse — ils ne sont PAS affichés au client. Pour montrer des produits, appelle ensuite recommendProducts.',
           inputSchema: z.object({
             query: z
               .string()
               .describe(
-                'Description en langage naturel du besoin : niveau, gabarit, type de vagues, style de surf (ex: "planche pour débutant de 80kg en petites vagues molles, stable et facile à ramer").'
+                'Description du besoin en langage naturel (niveau, gabarit, type de vagues, style, usage).'
+              ),
+            productType: z
+              .enum(['board', 'sup', 'skimboard', 'wetsuit', 'accessory', 'any'])
+              .describe(
+                'Type de produit recherché. "board" = planches de surf (le plus fréquent).'
               )
               .optional(),
-            category: z
-              .string()
-              .describe('Slug ou id de catégorie WooCommerce, si connu.')
-              .optional(),
-            maxPrice: z
-              .number()
-              .describe('Budget maximum en euros.')
-              .optional(),
-            minPrice: z
-              .number()
-              .describe('Budget minimum en euros.')
-              .optional()
+            maxPrice: z.number().describe('Budget maximum en euros.').optional(),
+            minPrice: z.number().describe('Budget minimum en euros.').optional()
           }),
-          execute: async ({ query, category, maxPrice, minPrice }) => {
+          execute: async ({ query, productType, maxPrice, minPrice }) => {
             const supabase = serverSupabaseServiceRole<any>(event)
-            const embedding = await embedQuery(query ?? 'planche de surf')
-            // Fetch a wider candidate set, then keep only actual surfboards
-            // (the catalog also has SUP, wetsuits, skimboards, accessories…).
+            const embedding = await embedQuery(query)
             const { data, error } = await supabase.rpc('match_products', {
               query_embedding: JSON.stringify(embedding),
-              match_count: 24,
+              match_count: 40,
               only_in_stock: true
             })
-            if (error) return { count: 0, boards: [], error: error.message }
+            if (error) return { count: 0, candidates: [], error: error.message }
 
-            const rows = (data ?? []) as Array<Record<string, unknown>>
-            let boards = rows
+            let candidates = ((data ?? []) as Array<Record<string, unknown>>)
+              .map(r => ({
+                id: r.woo_id as number,
+                name: r.name as string,
+                url: r.url as string,
+                categories: (r.categories as string[]) ?? [],
+                price: r.price as string,
+                inStock: Boolean(r.in_stock),
+                summary: ((r.summary as string) ?? '').slice(0, 140)
+              }))
+              .filter(c => matchesType(c.categories, productType))
+            if (maxPrice != null)
+              candidates = candidates.filter(c => parseFloat(c.price) <= maxPrice)
+            if (minPrice != null)
+              candidates = candidates.filter(c => parseFloat(c.price) >= minPrice)
+            candidates = candidates.slice(0, 10)
+            return { count: candidates.length, candidates }
+          }
+        }),
+        recommendProducts: tool({
+          description:
+            'Affiche au client les produits recommandés sous forme de cartes cliquables. À appeler APRÈS searchCatalog avec 1 à 4 ids (woo_id), ordonnés du plus au moins pertinent.',
+          inputSchema: z.object({
+            productIds: z
+              .array(z.number())
+              .min(1)
+              .max(4)
+              .describe('Ids produit (woo_id) à recommander, ordonnés par pertinence.')
+          }),
+          execute: async ({ productIds }) => {
+            const supabase = serverSupabaseServiceRole<any>(event)
+            const { data, error } = await supabase
+              .from('products')
+              .select(
+                'woo_id, name, url, price, regular_price, on_sale, in_stock, summary, image'
+              )
+              .in('woo_id', productIds)
+            if (error) return { count: 0, products: [], error: error.message }
+
+            const byId = new Map<number, Record<string, unknown>>(
+              ((data ?? []) as Array<Record<string, unknown>>).map(r => [
+                r.woo_id as number,
+                r
+              ])
+            )
+            const products = productIds
+              .map(id => byId.get(id))
+              .filter((r): r is Record<string, unknown> => Boolean(r))
               .map(r => ({
                 id: r.woo_id as number,
                 name: r.name as string,
@@ -120,37 +151,9 @@ export default defineLazyEventHandler(async () => {
                 onSale: Boolean(r.on_sale),
                 inStock: Boolean(r.in_stock),
                 summary: (r.summary as string) ?? '',
-                image: (r.image as string) ?? null,
-                categories: (r.categories as string[]) ?? []
+                image: (r.image as string) ?? null
               }))
-              .filter(b => isBoard(b.categories))
-
-            // Optional post-filters the model may request.
-            if (category)
-              boards = boards.filter(b =>
-                b.categories.some(c =>
-                  c.toLowerCase().includes(category.toLowerCase())
-                )
-              )
-            if (maxPrice != null)
-              boards = boards.filter(b => parseFloat(b.price) <= maxPrice)
-            if (minPrice != null)
-              boards = boards.filter(b => parseFloat(b.price) >= minPrice)
-
-            // Cap at 3: keep the suggestion grid focused, not overwhelming.
-            boards = boards.slice(0, 3)
-            return { count: boards.length, boards }
-          }
-        }),
-        getBoardDetails: tool({
-          description:
-            'Récupère les détails complets (specs, prix, dispo) d\'une planche précise par son id produit WooCommerce.',
-          inputSchema: z.object({
-            productId: z.number().describe('Id du produit WooCommerce.')
-          }),
-          execute: async ({ productId }) => {
-            const board = await getWooProduct(productId)
-            return board ?? { error: 'Produit introuvable' }
+            return { count: products.length, products }
           }
         })
       }
