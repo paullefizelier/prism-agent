@@ -68,6 +68,15 @@
     "logout": "Sign out",
     "viewSite": "View site",
     "messages": "Messages",
+    "searchConversations": "Search a conversation…",
+    "stats": {
+      "conversionRate": "Conversion rate",
+      "leadsTotal": "{count} request(s)",
+      "avgMessages": "Msgs / conversation",
+      "activity14": "Activity (14 days)",
+      "leadsByStatus": "Requests by status",
+      "leadsByReason": "Requests by reason"
+    },
     "topBoards": "Most recommended boards",
     "none": "No conversations yet.",
     "noPreview": "(no message)",

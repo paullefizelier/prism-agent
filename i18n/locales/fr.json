@@ -68,6 +68,15 @@
     "logout": "Déconnexion",
     "viewSite": "Voir le site",
     "messages": "Messages",
+    "searchConversations": "Rechercher une conversation…",
+    "stats": {
+      "conversionRate": "Taux de conversion",
+      "leadsTotal": "{count} demande(s)",
+      "avgMessages": "Msg / conversation",
+      "activity14": "Activité (14 jours)",
+      "leadsByStatus": "Demandes par statut",
+      "leadsByReason": "Demandes par motif"
+    },
     "topBoards": "Planches les plus recommandées",
     "none": "Aucune conversation pour l'instant.",
     "noPreview": "(sans message)",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 definePageMeta({ middleware: "admin" });
 
@@ -46,6 +46,17 @@ const statusItems = computed(() =>
 const activeStatus = ref<Status | null>(null);
 const activeReason = ref<Reason | null>(null);
 
+// Debounced free-text search over name / email / message.
+const searchInput = ref("");
+const search = ref("");
+let debounce: ReturnType<typeof setTimeout> | undefined;
+watch(searchInput, (v) => {
+  clearTimeout(debounce);
+  debounce = setTimeout(() => {
+    search.value = v.trim().toLowerCase();
+  }, 250);
+});
+
 const reasonsPresent = computed<Reason[]>(() => {
   const set = new Set<Reason>();
   for (const l of leads.value ?? []) set.add(l.reason);
@@ -56,7 +67,11 @@ const filtered = computed(() =>
   (leads.value ?? []).filter(
     (l) =>
       (!activeStatus.value || l.status === activeStatus.value) &&
-      (!activeReason.value || l.reason === activeReason.value),
+      (!activeReason.value || l.reason === activeReason.value) &&
+      (!search.value ||
+        l.name.toLowerCase().includes(search.value) ||
+        l.email.toLowerCase().includes(search.value) ||
+        l.message.toLowerCase().includes(search.value)),
   ),
 );
 
