@@ -494,34 +494,43 @@ export default defineLazyEventHandler(async () => {
           }),
           execute: async ({ topic }) => getShopInfo(topic as ShopInfoTopic, locale)
         }),
-        requestCustomShape: tool({
+        contactRequest: tool({
           description:
-            "Enregistre une demande de planche sur-mesure (made-to-order) pour un handoff à l'équipe Prism. À appeler UNIQUEMENT après avoir recueilli le nom, l'email et un brief (gabarit, niveau, type de vagues, style, budget…). Le téléphone est optionnel. Une confirmation s'affiche au client.",
+            "Enregistre une demande de contact / un transfert vers l'équipe Prism avec les coordonnées du client. Utilise-le dès qu'un humain est nécessaire : le client veut être recontacté, a un problème SAV/garantie, demande un devis ou une commande pro/club, ou veut une planche sur-mesure. À appeler UNIQUEMENT après avoir recueilli le nom, l'email et un message décrivant le besoin (+ le téléphone si le client veut être rappelé). Une confirmation s'affiche au client.",
           inputSchema: z.object({
+            reason: z
+              .enum(['callback', 'sav', 'quote', 'custom_shape', 'other'])
+              .describe(
+                'Motif : callback = rappel/contact, sav = après-vente/garantie, quote = devis/commande pro/club, custom_shape = planche sur-mesure, other = autre.'
+              ),
             name: z.string().describe('Nom du client.'),
             email: z.string().describe('Email du client.'),
-            phone: z.string().describe('Téléphone (optionnel).').optional(),
-            details: z
+            phone: z
+              .string()
+              .describe('Téléphone (recommandé pour un rappel, sinon optionnel).')
+              .optional(),
+            message: z
               .string()
               .describe(
-                'Brief du projet : gabarit, niveau, vagues, style, budget, dimensions souhaitées…'
+                'Description du besoin : pour un sur-mesure le brief (gabarit, niveau, vagues, style, budget) ; sinon la question/le problème/la demande de devis.'
               )
           }),
-          execute: async ({ name, email, phone, details }) => {
+          execute: async ({ reason, name, email, phone, message }) => {
             const supabase = serverSupabaseServiceRole<any>(event)
-            const { error } = await supabase.from('custom_shape_requests').insert({
+            const { error } = await supabase.from('leads').insert({
+              reason,
               name,
               email,
               phone: phone ?? null,
-              details,
+              message,
               product_context: productContext ?? null,
               conversation_id: conversationId ?? null
             })
             if (error) {
-              console.error('[custom_shape_requests] insert failed:', error.message)
+              console.error('[leads] insert failed:', error.message)
               return { ok: false }
             }
-            return { ok: true, name }
+            return { ok: true, reason, name }
           }
         })
       }
