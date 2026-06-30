@@ -1,9 +1,9 @@
-# Build scripts are ignored by default in pnpm 10+, and in CI pnpm errors unless
-# every dependency with a build script is explicitly listed here. These all ship
-# native binaries / build steps and are safe to build.
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - esbuild
-  - sharp
-  - unrs-resolver
-  - vue-demi
+# pnpm ignores dependency build scripts by default and, in CI, errors unless each
+# one is explicitly allowed (true) or denied (false). These all ship native
+# binaries / build steps and are safe to build.
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  vue-demi: true
