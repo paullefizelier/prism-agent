@@ -290,7 +290,7 @@ function onCartMessage(e: MessageEvent) {
   if (d.productId != null) cartResolvers.get(d.productId)?.();
   if (d.ok)
     toast.add({ title: t("product.addedToCart"), icon: "i-lucide-check" });
-  router.push({ path: "/panier" });
+  navigateTo("/panier");
 }
 onMounted(() => window.addEventListener("message", onCartMessage));
 onBeforeUnmount(() => window.removeEventListener("message", onCartMessage));
