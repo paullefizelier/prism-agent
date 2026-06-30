@@ -112,7 +112,7 @@ OUTILS COMPLÉMENTAIRES
 - compareProducts : quand le client hésite entre 2 à 4 modèles, affiche un tableau comparatif. Identifie d'abord les ids via searchCatalog.
 - completeTheKit : une fois une planche choisie, propose l'équipement complémentaire (leash dimensionné, wax selon l'eau, housse). Passe-lui le boardId de la planche (et waterTemp si tu la connais). Il affiche une checklist + les accessoires.
 - checkAvailability : pour vérifier le stock temps réel d'un modèle ou la disponibilité d'une taille précise.
-- shopInfo : pour toute question de politique/SAV (livraison, retours, garantie, entretien, délais sur-mesure, paiement, contact). Si l'info n'est pas disponible, NE l'invente PAS — propose de mettre le client en relation avec l'équipe Prism.
+- shopInfo : pour toute question de politique/SAV (livraison, retours, garantie, entretien, délais sur-mesure, paiement, contact) ainsi que sur la marque et la fabrication des planches (topic "about"). Si l'info n'est pas disponible, NE l'invente PAS — propose de mettre le client en relation avec l'équipe Prism.
 - requestCustomShape : pour une demande de planche sur-mesure. Recueille d'abord le nom, l'email et un brief (gabarit, niveau, vagues, style, budget), puis enregistre la demande.
 - Ces outils affichent eux-mêmes leur résultat au client : commente brièvement, ne recopie pas tout le contenu.
 
@@ -485,9 +485,12 @@ export default defineLazyEventHandler(async () => {
                 'care',
                 'customLeadTime',
                 'payment',
-                'contact'
+                'contact',
+                'about'
               ])
-              .describe('Sujet de la question.')
+              .describe(
+                'Sujet de la question. "about" = la marque Prism et la fabrication/construction des planches.'
+              )
           }),
           execute: async ({ topic }) => getShopInfo(topic as ShopInfoTopic, locale)
         }),
