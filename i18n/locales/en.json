@@ -1,0 +1,58 @@
+{
+  "common": {
+    "copy": "Copy",
+    "regenerate": "Regenerate",
+    "retry": "Retry"
+  },
+  "chat": {
+    "title": "Prism Surf Advisor",
+    "subtitle": "AI advisor • board finder",
+    "emptyTitle": "Hi! 🤙 I'll help you find your ideal board.",
+    "emptyHint": "Tell me your level, your weight, and the kind of waves you surf.",
+    "placeholder": "Ask your question...",
+    "searching": "Searching the Prism catalog…",
+    "thinking": "The shaper is thinking…",
+    "switchLanguage": "Change language",
+    "history": "History",
+    "copied": "Answer copied",
+    "errorTitle": "Oops, something went wrong",
+    "errorDescription": "The connection to the advisor failed. Please try again in a moment.",
+    "suggestions": {
+      "beginner": "I'm a beginner, which board should I choose?",
+      "size": "What size for 75 kg in mellow waves?",
+      "performance": "A performance board for an advanced rider?"
+    }
+  },
+  "product": {
+    "view": "View product",
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "sale": "Sale"
+  },
+  "history": {
+    "heading": "Conversations",
+    "new": "New conversation",
+    "empty": "No saved conversations",
+    "delete": "Delete {title}"
+  },
+  "login": {
+    "title": "Prism Admin",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in"
+  },
+  "admin": {
+    "conversations": "Conversations",
+    "logout": "Sign out",
+    "messages": "Messages",
+    "topBoards": "Most recommended boards",
+    "none": "No conversations yet.",
+    "noPreview": "(no message)",
+    "messagesCount": "{count} msg",
+    "recoCount": "{count} reco",
+    "viewedProduct": "product: {name}",
+    "back": "Back",
+    "recommendedBoards": "🔎 recommended boards:",
+    "consultedProduct": "viewed product: {name}"
+  }
+}

@@ -39,10 +39,10 @@ async function logout() {
   <UContainer class="py-8 space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">
-        Conversations
+        {{ $t("admin.conversations") }}
       </h1>
       <UButton
-        label="Déconnexion"
+        :label="$t('admin.logout')"
         icon="i-lucide-log-out"
         color="neutral"
         variant="ghost"
@@ -54,7 +54,7 @@ async function logout() {
     <div class="grid gap-4 sm:grid-cols-3">
       <UCard>
         <p class="text-sm text-muted">
-          Conversations
+          {{ $t("admin.conversations") }}
         </p>
         <p class="text-2xl font-semibold">
           {{ stats?.totalConversations ?? 0 }}
@@ -62,7 +62,7 @@ async function logout() {
       </UCard>
       <UCard>
         <p class="text-sm text-muted">
-          Messages
+          {{ $t("admin.messages") }}
         </p>
         <p class="text-2xl font-semibold">
           {{ stats?.totalMessages ?? 0 }}
@@ -70,7 +70,7 @@ async function logout() {
       </UCard>
       <UCard>
         <p class="text-sm text-muted mb-1">
-          Planches les plus recommandées
+          {{ $t("admin.topBoards") }}
         </p>
         <ol
           v-if="stats?.topBoards?.length"
@@ -100,7 +100,7 @@ async function logout() {
         v-if="!conversations?.length"
         class="p-6 text-center text-muted text-sm"
       >
-        Aucune conversation pour l'instant.
+        {{ $t("admin.none") }}
       </div>
       <NuxtLink
         v-for="c in conversations"
@@ -110,24 +110,24 @@ async function logout() {
       >
         <div class="min-w-0">
           <p class="truncate text-sm font-medium">
-            {{ c.preview || "(sans message)" }}
+            {{ c.preview || $t("admin.noPreview") }}
           </p>
           <p class="text-xs text-muted">
             {{ fmtDate(c.created_at) }}
             <span v-if="c.product_context?.name">
-              · fiche : {{ c.product_context.name }}
+              · {{ $t("admin.viewedProduct", { name: c.product_context.name }) }}
             </span>
           </p>
         </div>
         <div class="flex items-center gap-3 shrink-0 text-xs text-muted">
-          <span>{{ c.message_count }} msg</span>
+          <span>{{ $t("admin.messagesCount", { count: c.message_count }) }}</span>
           <UBadge
             v-if="c.recommended_woo_ids?.length"
             color="primary"
             variant="subtle"
             size="sm"
           >
-            {{ c.recommended_woo_ids.length }} reco
+            {{ $t("admin.recoCount", { count: c.recommended_woo_ids.length }) }}
           </UBadge>
           <UIcon
             name="i-lucide-chevron-right"

@@ -1,12 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: [
-    '@nuxt/eslint',
-    '@nuxt/ui',
-    '@comark/nuxt',
-    '@nuxt/image',
-    '@nuxtjs/supabase'
-  ],
+  modules: ['@nuxt/eslint', '@nuxt/ui', '@comark/nuxt', '@nuxt/image', '@nuxtjs/supabase', '@nuxtjs/i18n'],
 
   devtools: {
     enabled: true
@@ -52,5 +46,20 @@ export default defineNuxtConfig({
   // Disable the module's auth redirect — this is a public widget, not a gated app.
   supabase: {
     redirect: false
+  },
+
+  // UI i18n. no_prefix: locale via browser detection + cookie, no URL change
+  // (important for the iframe widget). Agent replies stay language-detected.
+  i18n: {
+    defaultLocale: 'fr',
+    strategy: 'no_prefix',
+    locales: [
+      { code: 'fr', language: 'fr-FR', name: 'Français', file: 'fr.json' },
+      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' }
+    ],
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_locale'
+    }
   }
 })

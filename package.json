@@ -21,6 +21,7 @@
     "@nuxt/image": "2.0.0",
     "@nuxt/scripts": "1.2.1",
     "@nuxt/ui": "^4.9.0",
+    "@nuxtjs/i18n": "10.4.0",
     "@nuxtjs/supabase": "2.0.9",
     "@supabase/supabase-js": "^2.108.2",
     "ai": "^7.0.4",

@@ -25,8 +25,8 @@ const route = useRoute()
 const { data: convo } = await useFetch<Convo>(
   `/api/admin/conversations/${route.params.id}`
 )
-function boards(part: unknown): Board[] {
-  return (part as { output?: { boards?: Board[] } }).output?.boards ?? []
+function products(part: unknown): Board[] {
+  return (part as { output?: { products?: Board[] } }).output?.products ?? []
 }
 </script>
 
@@ -34,7 +34,7 @@ function boards(part: unknown): Board[] {
   <UContainer class="py-8 space-y-4 max-w-3xl">
     <UButton
       to="/admin"
-      label="Retour"
+      :label="$t('admin.back')"
       icon="i-lucide-arrow-left"
       color="neutral"
       variant="ghost"
@@ -47,7 +47,10 @@ function boards(part: unknown): Board[] {
       <p class="text-xs text-muted">
         {{ new Date(convo.created_at).toLocaleString("fr-FR") }}
         <span v-if="convo.product_context?.name">
-          · fiche consultée : {{ convo.product_context.name }}
+          ·
+          {{
+            $t("admin.consultedProduct", { name: convo.product_context.name })
+          }}
         </span>
       </p>
 
@@ -72,15 +75,17 @@ function boards(part: unknown): Board[] {
               {{ part.text }}
             </p>
             <div
-              v-else-if="part.type === 'tool-searchBoards' && boards(part).length"
+              v-else-if="
+                part.type === 'tool-recommendProducts' && products(part).length
+              "
               class="mt-1 text-xs"
             >
               <p class="text-muted mb-0.5">
-                🔎 planches recommandées :
+                {{ $t("admin.recommendedBoards") }}
               </p>
               <ul class="space-y-0.5">
                 <li
-                  v-for="b in boards(part)"
+                  v-for="b in products(part)"
                   :key="b.id"
                 >
                   <a

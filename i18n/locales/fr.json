@@ -1,0 +1,58 @@
+{
+  "common": {
+    "copy": "Copier",
+    "regenerate": "Régénérer",
+    "retry": "Réessayer"
+  },
+  "chat": {
+    "title": "Prism Surf Advisor",
+    "subtitle": "Conseiller IA • choix de planche",
+    "emptyTitle": "Salut ! 🤙 Je t'aide à trouver ta planche idéale.",
+    "emptyHint": "Dis-moi ton niveau, ton gabarit et le type de vagues que tu surfes.",
+    "placeholder": "Pose ta question...",
+    "searching": "Je parcours le catalogue Prism…",
+    "thinking": "Le shaper réfléchit…",
+    "switchLanguage": "Changer de langue",
+    "history": "Historique",
+    "copied": "Réponse copiée",
+    "errorTitle": "Oups, une erreur est survenue",
+    "errorDescription": "La connexion au conseiller a échoué. Réessaie dans un instant.",
+    "suggestions": {
+      "beginner": "Je débute, quelle planche choisir ?",
+      "size": "Quelle taille pour 75 kg en vagues molles ?",
+      "performance": "Une planche performance pour rider confirmé ?"
+    }
+  },
+  "product": {
+    "view": "Voir le produit",
+    "inStock": "En stock",
+    "outOfStock": "Épuisé",
+    "sale": "Promo"
+  },
+  "history": {
+    "heading": "Discussions",
+    "new": "Nouvelle discussion",
+    "empty": "Aucune conversation enregistrée",
+    "delete": "Supprimer {title}"
+  },
+  "login": {
+    "title": "Prism Admin",
+    "email": "Email",
+    "password": "Mot de passe",
+    "submit": "Se connecter"
+  },
+  "admin": {
+    "conversations": "Conversations",
+    "logout": "Déconnexion",
+    "messages": "Messages",
+    "topBoards": "Planches les plus recommandées",
+    "none": "Aucune conversation pour l'instant.",
+    "noPreview": "(sans message)",
+    "messagesCount": "{count} msg",
+    "recoCount": "{count} reco",
+    "viewedProduct": "fiche : {name}",
+    "back": "Retour",
+    "recommendedBoards": "🔎 planches recommandées :",
+    "consultedProduct": "fiche consultée : {name}"
+  }
+}

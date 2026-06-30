@@ -39,7 +39,7 @@ async function login() {
             class="size-5 text-primary"
           />
           <h1 class="font-semibold">
-            Prism Admin
+            {{ $t("login.title") }}
           </h1>
         </div>
       </template>
@@ -48,7 +48,7 @@ async function login() {
         class="space-y-4"
         @submit.prevent="login"
       >
-        <UFormField label="Email">
+        <UFormField :label="$t('login.email')">
           <UInput
             v-model="email"
             type="email"
@@ -57,7 +57,7 @@ async function login() {
             class="w-full"
           />
         </UFormField>
-        <UFormField label="Mot de passe">
+        <UFormField :label="$t('login.password')">
           <UInput
             v-model="password"
             type="password"
@@ -77,7 +77,7 @@ async function login() {
 
         <UButton
           type="submit"
-          label="Se connecter"
+          :label="$t('login.submit')"
           :loading="loading"
           block
         />

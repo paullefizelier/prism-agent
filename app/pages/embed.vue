@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Iframe-embedded chat (widget). Bare full-height layout, no site chrome.
-definePageMeta({ layout: 'embed' })
+// History lives behind a header button that opens a slideover.
+definePageMeta({ layout: "embed" });
 </script>
 
 <template>
-  <SurfChat />
+  <SurfChat embedded />
 </template>
