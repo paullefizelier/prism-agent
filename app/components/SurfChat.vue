@@ -248,6 +248,12 @@ function addToCart(board: BoardCard) {
     openUrl(cartUrl(board));
   }
 }
+// Agent-driven add (addToCart tool, after the visitor taps confirm): reuse the
+// per-product bridge for each item.
+function addProductsToCart(products: { id: number; url: string }[]) {
+  for (const p of products) addToCart(p as BoardCard);
+}
+
 function onCartMessage(e: MessageEvent) {
   const d = e.data as { type?: string; ok?: boolean; productId?: number };
   if (!d || d.type !== "prism-add-to-cart-result") return;
@@ -632,6 +638,27 @@ function partOutput(part: unknown): any {
               part.type === 'tool-contactRequest' && !isToolStreaming(part)
             "
             :data="partOutput(part)"
+          />
+
+          <!-- Add to cart: indicator while preparing, then one-tap confirm card -->
+          <div
+            v-else-if="
+              part.type === 'tool-addToCart' && isToolStreaming(part)
+            "
+            class="flex items-center gap-2 my-1 text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="size-4 animate-spin shrink-0"
+            />
+            <UChatShimmer :text="$t('tools.preparingCart')" />
+          </div>
+          <ChatAddToCart
+            v-else-if="
+              part.type === 'tool-addToCart' && !isToolStreaming(part)
+            "
+            :data="partOutput(part)"
+            @add="addProductsToCart"
           />
         </template>
       </template>

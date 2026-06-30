@@ -15,6 +15,7 @@
     "sizesTitle": "Tailles disponibles",
     "unitsLeft": "Plus que {count} en stock",
     "sendingRequest": "J'enregistre ta demande…",
+    "preparingCart": "Je prépare ton panier…",
     "contactSent": "Demande transmise 🤙",
     "contactNote": "L'équipe Prism te recontacte très vite.",
     "contactError": "L'envoi a échoué, réessaie dans un instant."
@@ -47,6 +48,7 @@
   "product": {
     "view": "Voir le produit",
     "addToCart": "Ajouter au panier",
+    "addToCartQuestion": "Ajouter au panier ?",
     "addedToCart": "Ajouté au panier 🤙",
     "inStock": "En stock",
     "outOfStock": "Épuisé",

@@ -114,6 +114,7 @@ OUTILS COMPLÉMENTAIRES
 - checkAvailability : pour vérifier le stock temps réel d'un modèle ou la disponibilité d'une taille précise.
 - shopInfo : pour toute question de politique/SAV (livraison, retours, garantie, entretien, délais sur-mesure, paiement, contact) ainsi que sur la marque et la fabrication des planches (topic "about"). Si l'info n'est pas disponible, NE l'invente PAS — propose de mettre le client en relation avec l'équipe Prism.
 - contactRequest : pour transférer le client à l'équipe avec ses coordonnées — rappel/contact, SAV/garantie, devis ou commande pro/club, ou demande de planche sur-mesure. Recueille d'abord le nom, l'email et un message (le brief pour un sur-mesure), + le téléphone si le client veut être rappelé, puis enregistre la demande avec le bon motif.
+- addToCart : UNIQUEMENT si le visiteur demande explicitement d'ajouter un/des produit(s) au panier. Passe les woo_id concernés. Une carte de confirmation s'affiche (le visiteur valide d'un clic). N'ajoute jamais de ta propre initiative.
 - Ces outils affichent eux-mêmes leur résultat au client : commente brièvement, ne recopie pas tout le contenu.
 
 UPSELL / CROSS-SELL — SUBTIL ET HONNÊTE
@@ -546,6 +547,42 @@ export default defineLazyEventHandler(async () => {
               return { ok: false }
             }
             return { ok: true, reason, name }
+          }
+        }),
+        addToCart: tool({
+          description:
+            "Prépare l'ajout au panier d'un à 4 produits via leurs woo_id. À appeler UNIQUEMENT quand le visiteur demande explicitement d'ajouter au panier (jamais de ta propre initiative). Le client affiche une carte de confirmation avec un bouton ; l'ajout réel au panier WooCommerce se fait dans le navigateur du visiteur après son clic.",
+          inputSchema: z.object({
+            productIds: z
+              .array(z.number())
+              .min(1)
+              .max(4)
+              .describe('woo_id des produits à ajouter au panier.')
+          }),
+          execute: async ({ productIds }) => {
+            const supabase = serverSupabaseServiceRole<any>(event)
+            const { data, error } = await supabase
+              .from('products')
+              .select('woo_id, name, url, price, image')
+              .in('woo_id', productIds)
+            if (error) return { products: [], error: error.message }
+            const byId = new Map<number, Record<string, unknown>>(
+              ((data ?? []) as Array<Record<string, unknown>>).map(r => [
+                r.woo_id as number,
+                r
+              ])
+            )
+            const products = productIds
+              .map(id => byId.get(id))
+              .filter((r): r is Record<string, unknown> => Boolean(r))
+              .map(r => ({
+                id: r.woo_id as number,
+                name: r.name as string,
+                url: localizeUrl(r.url as string, locale),
+                price: r.price as string,
+                image: (r.image as string) ?? null
+              }))
+            return { products }
           }
         })
       }

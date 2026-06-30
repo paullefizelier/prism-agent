@@ -4,6 +4,17 @@
  * Drop this on any WooCommerce page:
  *   <script src="https://prism-agent-ten.vercel.app/loader.js" defer></script>
  *
+ * IMPORTANT (LiteSpeed / optimiseurs JS): do NOT enqueue this via
+ * wp_enqueue_script — LiteSpeed "JS Combine" merges/drops the external tag for
+ * guests (it survives cache purges and ?cb= busters), so the widget shows for
+ * logged-in users but vanishes for anonymous visitors. Output it raw in
+ * wp_footer with no-optimize markers instead:
+ *   add_action('wp_footer', function () {
+ *     echo '<script src="https://prism-agent-ten.vercel.app/loader.js" defer '
+ *        . 'data-no-optimize="1" data-no-defer="1" data-no-minify="1" '
+ *        . 'data-cfasync="false"></script>';
+ *   }, 99);
+ *
  * Adds a vertical "tab" pinned to the right edge that opens the advisor in an
  * iframe, detecting the current page context (product / category / language) so
  * the chat opens aware of what the visitor is browsing. Everything lives in a
