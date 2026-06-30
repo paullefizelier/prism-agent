@@ -51,9 +51,9 @@ async function logout() {
           size="sm"
         />
         <UButton
-          to="/admin/custom-shapes"
-          :label="$t('admin.customShapes.title')"
-          icon="i-lucide-ruler"
+          to="/admin/leads"
+          :label="$t('admin.leads.title')"
+          icon="i-lucide-inbox"
           color="neutral"
           variant="ghost"
           size="sm"

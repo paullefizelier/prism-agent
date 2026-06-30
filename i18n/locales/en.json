@@ -15,9 +15,9 @@
     "sizesTitle": "Available sizes",
     "unitsLeft": "Only {count} left in stock",
     "sendingRequest": "Saving your request…",
-    "customShapeSent": "Custom order request sent 🤙",
-    "customShapeNote": "The Prism team will get back to you shortly to refine your project.",
-    "customShapeError": "Sending failed, please try again in a moment."
+    "contactSent": "Request sent 🤙",
+    "contactNote": "The Prism team will get back to you shortly.",
+    "contactError": "Sending failed, please try again in a moment."
   },
   "common": {
     "copy": "Copy",
@@ -90,10 +90,18 @@
       "notFound": "Product not found",
       "error": "Operation failed"
     },
-    "customShapes": {
-      "title": "Custom requests",
-      "none": "No custom-order requests yet.",
-      "viewConversation": "View conversation"
+    "leads": {
+      "title": "Requests / Leads",
+      "none": "No requests yet.",
+      "viewConversation": "View conversation",
+      "all": "All",
+      "reason": {
+        "callback": "Callback",
+        "sav": "After-sales",
+        "quote": "Quote / Pro",
+        "custom_shape": "Custom",
+        "other": "Other"
+      }
     }
   }
 }

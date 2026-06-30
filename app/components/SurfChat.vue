@@ -11,9 +11,9 @@ const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
   embedded: false,
 });
 
-// Open every link (markdown links in answers, product cards) in a new tab so a
-// click never navigates the iframe itself.
-useHead({ base: { target: "_blank" } });
+// Link targets: full-screen opens in a new tab; embedded navigates the parent
+// window (_top) so product links go to the product page instead of opening a tab.
+useHead({ base: { target: props.embedded ? "_top" : "_blank" } });
 
 const { t, locale, setLocale } = useI18n();
 
@@ -354,19 +354,23 @@ function partOutput(part: unknown): any {
                 :title="board.name"
                 :description="board.summary"
                 :image="board.image ?? undefined"
-                target="_blank"
+                :target="embedded ? '_top' : '_blank'"
                 rel="noopener"
                 class="transition-shadow hover:shadow-lg"
                 :ui="{
-                  header: 'aspect-square',
+                  header: embedded ? 'aspect-video' : 'aspect-square',
                   root: 'flex flex-col justify-between',
-                  footer:
-                    'flex items-center gap-2 p-4 sm:p-6 border-t border-default justify-between',
+                  footer: embedded
+                    ? 'flex items-center gap-2 p-3 border-t border-default justify-between'
+                    : 'flex items-center gap-2 p-4 sm:p-6 border-t border-default justify-between',
                   body: 'flex-1',
                 }"
               >
                 <template #header>
-                  <div class="relative aspect-square bg-elevated">
+                  <div
+                    class="relative bg-elevated"
+                    :class="embedded ? 'aspect-video' : 'aspect-square'"
+                  >
                     <NuxtImg
                       v-if="board.image"
                       :src="board.image"
@@ -399,7 +403,10 @@ function partOutput(part: unknown): any {
                 <template #footer>
                   <div class="flex flex-col">
                     <div class="flex items-baseline gap-2">
-                      <span class="font-semibold text-base">
+                      <span
+                        class="font-semibold"
+                        :class="embedded ? 'text-sm' : 'text-base'"
+                      >
                         {{ board.price }} €
                       </span>
                       <span
@@ -544,10 +551,10 @@ function partOutput(part: unknown): any {
             <UChatShimmer :text="$t('tools.checkingInfo')" />
           </div>
 
-          <!-- Custom shape request: indicator while saving, then confirmation -->
+          <!-- Contact / handoff request: indicator while saving, then confirmation -->
           <div
             v-else-if="
-              part.type === 'tool-requestCustomShape' && isToolStreaming(part)
+              part.type === 'tool-contactRequest' && isToolStreaming(part)
             "
             class="flex items-center gap-2 my-1 text-sm text-muted"
           >
@@ -557,9 +564,9 @@ function partOutput(part: unknown): any {
             />
             <UChatShimmer :text="$t('tools.sendingRequest')" />
           </div>
-          <ChatCustomShapeConfirm
+          <ChatContactConfirm
             v-else-if="
-              part.type === 'tool-requestCustomShape' && !isToolStreaming(part)
+              part.type === 'tool-contactRequest' && !isToolStreaming(part)
             "
             :data="partOutput(part)"
           />

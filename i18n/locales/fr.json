@@ -15,9 +15,9 @@
     "sizesTitle": "Tailles disponibles",
     "unitsLeft": "Plus que {count} en stock",
     "sendingRequest": "J'enregistre ta demande…",
-    "customShapeSent": "Demande de sur-mesure envoyée 🤙",
-    "customShapeNote": "L'équipe Prism te recontacte très vite pour affiner ton projet.",
-    "customShapeError": "L'envoi a échoué, réessaie dans un instant."
+    "contactSent": "Demande transmise 🤙",
+    "contactNote": "L'équipe Prism te recontacte très vite.",
+    "contactError": "L'envoi a échoué, réessaie dans un instant."
   },
   "common": {
     "copy": "Copier",
@@ -90,10 +90,18 @@
       "notFound": "Produit introuvable",
       "error": "Échec de l'opération"
     },
-    "customShapes": {
-      "title": "Demandes sur-mesure",
-      "none": "Aucune demande de sur-mesure pour l'instant.",
-      "viewConversation": "Voir la conversation"
+    "leads": {
+      "title": "Demandes / Leads",
+      "none": "Aucune demande pour l'instant.",
+      "viewConversation": "Voir la conversation",
+      "all": "Tous",
+      "reason": {
+        "callback": "Rappel",
+        "sav": "SAV",
+        "quote": "Devis / Pro",
+        "custom_shape": "Sur-mesure",
+        "other": "Autre"
+      }
     }
   }
 }
