@@ -144,7 +144,7 @@ export default defineLazyEventHandler(async () => {
       })
     }
 
-    const { messages, productContext, conversationId, locale } = await readBody<{
+    const { messages, productContext, conversationId, locale, visitorId } = await readBody<{
       messages: UIMessage[]
       productContext?: {
         type?: 'product' | 'category'
@@ -155,6 +155,7 @@ export default defineLazyEventHandler(async () => {
       }
       conversationId?: string
       locale?: string
+      visitorId?: string
     }>(event)
 
     // The widget passes the page the visitor is on (product or category) so the
@@ -561,7 +562,8 @@ export default defineLazyEventHandler(async () => {
             serverSupabaseServiceRole<any>(event),
             conversationId,
             full,
-            productContext
+            productContext,
+            visitorId
           )
         }
       }

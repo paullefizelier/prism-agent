@@ -47,6 +47,7 @@
   "product": {
     "view": "View product",
     "addToCart": "Add to cart",
+    "addedToCart": "Added to cart 🤙",
     "inStock": "In stock",
     "outOfStock": "Out of stock",
     "sale": "Sale"

@@ -33,7 +33,8 @@ export async function persistConversation(
   supabase: SupabaseClient,
   id: string,
   messages: UIMessage[],
-  productContext: unknown
+  productContext: unknown,
+  visitorId?: string
 ): Promise<void> {
   try {
     const { error } = await supabase.from('conversations').upsert(
@@ -44,7 +45,8 @@ export async function persistConversation(
         product_context: productContext ?? null,
         recommended_woo_ids: recommendedWooIds(messages),
         message_count: messages.length,
-        messages
+        messages,
+        ...(visitorId ? { visitor_id: visitorId } : {})
       },
       { onConflict: 'id' }
     )

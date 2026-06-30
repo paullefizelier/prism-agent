@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useChat } from "@ai-sdk/vue";
 import type { UIMessage } from "ai";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { isPartStreaming, isToolStreaming } from "@nuxt/ui/utils/ai";
 
 // Shared chat UI used both full-screen (/) and embedded in an iframe (/embed).
@@ -79,26 +79,23 @@ const isBusy = computed(
 // a brand-new conversation the moment its first message is being sent.
 let restoring = false;
 
-function loadConversation(id: string | null) {
-  const convo = id
-    ? history.conversations.value.find((c) => c.id === id)
-    : null;
+async function loadConversation(id: string | null) {
   restoring = true;
-  messages.value = convo ? [...convo.messages] : [];
+  // Transcripts live on the server now — fetch on demand (scoped by visitorId).
+  messages.value = id ? await history.fetchMessages(id) : [];
   conversationId.value = id ?? undefined;
   if (error.value) clearError();
-  nextTick(() => {
-    restoring = false;
-  });
+  await nextTick();
+  restoring = false;
 }
 
-onMounted(() => {
+onMounted(async () => {
   // Open in the page's language when the widget loader passes ?lang=.
   const lang = route.query.lang;
   if ((lang === "fr" || lang === "en") && lang !== locale.value) setLocale(lang);
 
-  history.load();
-  // Deep-link: restore the conversation named in ?c=<id> if it's stored here.
+  await history.load();
+  // Deep-link: restore the conversation named in ?c=<id> if it's the visitor's.
   const c = typeof route.query.c === "string" ? route.query.c : undefined;
   if (c && history.conversations.value.some((conv) => conv.id === c)) {
     history.select(c);
@@ -137,7 +134,8 @@ watch(
   (s) => {
     if (restoring) return;
     if ((s === "ready" || s === "error") && messages.value.length) {
-      history.upsertActive(messages.value as UIMessage[]);
+      // Server already persisted the transcript; just reflect it in the list.
+      history.noteActive(messages.value as UIMessage[]);
     }
   },
 );
@@ -162,6 +160,7 @@ function send(text: string) {
         productContext: productContext.value,
         conversationId: conversationId.value,
         locale: locale.value,
+        visitorId: history.ensureVisitorId(),
       },
     },
   );
@@ -205,9 +204,6 @@ function productsFromPart(part: unknown): BoardCard[] {
   );
 }
 
-// WooCommerce add-to-cart. The widget lives on the WC site, so navigating the
-// top window to ?add-to-cart hits the visitor's real cart session (variable
-// products redirect to the product page to pick a size).
 function cartUrl(board: BoardCard): string {
   try {
     const origin = new URL(board.url).origin;
@@ -226,9 +222,41 @@ function openUrl(url: string) {
 function goToProduct(board: BoardCard) {
   openUrl(board.url);
 }
+
+// Add to cart. Embedded, the first-party loader.js holds the WooCommerce
+// session, so we ask it (postMessage) to add over AJAX and stay in the chat;
+// it replies with prism-add-to-cart-result (and navigates to the product page
+// itself if the item needs options). Full-screen we just open the cart URL.
+const addingId = ref<number>();
 function addToCart(board: BoardCard) {
-  openUrl(cartUrl(board));
+  if (!props.embedded) {
+    openUrl(cartUrl(board));
+    return;
+  }
+  try {
+    const wcOrigin = new URL(board.url).origin;
+    addingId.value = board.id;
+    window.parent.postMessage(
+      { type: "prism-add-to-cart", productId: board.id, productUrl: board.url },
+      wcOrigin,
+    );
+    // Clear the spinner even if the bridge never answers (old loader, etc.).
+    window.setTimeout(() => {
+      if (addingId.value === board.id) addingId.value = undefined;
+    }, 6000);
+  } catch {
+    openUrl(cartUrl(board));
+  }
 }
+function onCartMessage(e: MessageEvent) {
+  const d = e.data as { type?: string; ok?: boolean; productId?: number };
+  if (!d || d.type !== "prism-add-to-cart-result") return;
+  if (addingId.value === d.productId) addingId.value = undefined;
+  if (d.ok)
+    toast.add({ title: t("product.addedToCart"), icon: "i-lucide-check" });
+}
+onMounted(() => window.addEventListener("message", onCartMessage));
+onBeforeUnmount(() => window.removeEventListener("message", onCartMessage));
 
 // Tool-result parts carry their payload under `output` once resolved; cast past
 // the loose slot typing so the dedicated renderers receive it.
@@ -457,6 +485,7 @@ function partOutput(part: unknown): any {
                       color="primary"
                       variant="solid"
                       size="sm"
+                      :loading="addingId === board.id"
                       :label="$t('product.addToCart')"
                       @click.stop.prevent="addToCart(board)"
                     />

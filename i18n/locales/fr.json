@@ -47,6 +47,7 @@
   "product": {
     "view": "Voir le produit",
     "addToCart": "Ajouter au panier",
+    "addedToCart": "Ajouté au panier 🤙",
     "inStock": "En stock",
     "outOfStock": "Épuisé",
     "sale": "Promo"

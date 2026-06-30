@@ -1,28 +1,26 @@
 import type { UIMessage } from "ai";
 
-// Per-browser conversation history, persisted to localStorage. Shared as a
-// module-level singleton so the chat panel (SurfChat) and the history list
-// (ChatHistoryList) read and write the exact same reactive state, whether the
-// list is rendered in the full-screen sidebar or the iframe slideover.
+// Server-backed conversation history. The visitor is identified by an anonymous
+// UUID kept in localStorage (the ONLY thing stored locally — no transcripts, so
+// no quota risk). The conversation list and transcripts are fetched from the API
+// (/api/conversations), scoped by that visitorId. Shared as a module-level
+// singleton so SurfChat and ChatHistoryList read the same reactive state.
 
-export interface ChatConversation {
+export interface ConversationListItem {
   id: string;
   title: string;
-  messages: UIMessage[];
-  createdAt: number;
-  updatedAt: number;
+  updatedAt: number | string;
 }
 
-const STORAGE_KEY = "prism-surf-chat-history-v1";
+const VISITOR_KEY = "prism-surf-visitor-v1";
 const ACTIVE_KEY = "prism-surf-chat-active-v1";
-const MAX_CONVERSATIONS = 30;
 
-const conversations = ref<ChatConversation[]>([]);
+const conversations = ref<ConversationListItem[]>([]);
 const activeId = ref<string | null>(null);
+const visitorId = ref<string>("");
 let initialized = false;
 
-// Remember which conversation was open so reopening the widget (after the host
-// page reloads/navigates) resumes it instead of starting a fresh chat.
+// Remember which conversation was open so reopening the widget resumes it.
 if (import.meta.client) {
   watch(activeId, (id) => {
     try {
@@ -45,33 +43,65 @@ function deriveTitle(messages: UIMessage[]): string {
   return text.length > 48 ? `${text.slice(0, 47)}…` : text;
 }
 
-function load() {
+// Stable anonymous id for this browser, created lazily on first use.
+function ensureVisitorId(): string {
+  if (visitorId.value) return visitorId.value;
+  let v = "";
+  try {
+    v = localStorage.getItem(VISITOR_KEY) ?? "";
+    if (!v) {
+      v = crypto.randomUUID();
+      localStorage.setItem(VISITOR_KEY, v);
+    }
+  } catch {
+    v = v || crypto.randomUUID();
+  }
+  visitorId.value = v;
+  return v;
+}
+
+async function fetchList() {
+  if (!import.meta.client || !visitorId.value) return;
+  try {
+    const data = await $fetch<ConversationListItem[]>("/api/conversations", {
+      query: { visitorId: visitorId.value },
+    });
+    conversations.value = data ?? [];
+  } catch {
+    // Network error: keep the current list rather than wiping it.
+  }
+}
+
+async function load() {
   if (!import.meta.client || initialized) return;
   initialized = true;
+  ensureVisitorId();
+  await fetchList();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) conversations.value = JSON.parse(raw) as ChatConversation[];
-    // Resume the last open conversation if it's still stored.
     const last = localStorage.getItem(ACTIVE_KEY);
     if (last && conversations.value.some((c) => c.id === last)) {
       activeId.value = last;
     }
   } catch {
-    // Corrupted/unreadable storage: start clean rather than crash the widget.
+    // best-effort
   }
 }
 
-function persist() {
-  if (!import.meta.client) return;
+// Fetch one conversation's full transcript on demand.
+async function fetchMessages(id: string): Promise<UIMessage[]> {
+  if (!visitorId.value) return [];
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.value));
+    const data = await $fetch<{ id: string; messages: UIMessage[] }>(
+      `/api/conversations/${id}`,
+      { query: { visitorId: visitorId.value } },
+    );
+    return data?.messages ?? [];
   } catch {
-    // Quota exceeded or serialization issue: drop silently, history is best-effort.
+    return [];
   }
 }
 
-// Switch to a brand-new (unsaved) conversation. The entry is only written on
-// the first exchange, so empty "new" chats never clutter the list.
+// Switch to a brand-new conversation; the server row appears once it's persisted.
 function startNew() {
   activeId.value = crypto.randomUUID();
 }
@@ -80,42 +110,52 @@ function select(id: string) {
   activeId.value = id;
 }
 
-function remove(id: string) {
+async function remove(id: string) {
   conversations.value = conversations.value.filter((c) => c.id !== id);
   if (activeId.value === id) activeId.value = null;
-  persist();
+  if (!visitorId.value) return;
+  try {
+    await $fetch(`/api/conversations/${id}`, {
+      method: "DELETE",
+      query: { visitorId: visitorId.value },
+    });
+  } catch {
+    // best-effort; it'll reconcile on next fetchList()
+  }
 }
 
-// Create or update the active conversation from the current message list, then
-// move it to the front (most-recent first) and prune the oldest beyond the cap.
-function upsertActive(messages: UIMessage[]) {
+// Optimistically reflect the just-finished active conversation in the list
+// (the server already persisted it via the chat endpoint). Reconciled by
+// fetchList() on the next load.
+function noteActive(messages: UIMessage[]) {
   if (!activeId.value) return;
   const id = activeId.value;
+  const title = deriveTitle(messages);
   const now = Date.now();
-  // Detach from reactive/streaming refs so stored data is a stable snapshot.
-  const snapshot = JSON.parse(JSON.stringify(messages)) as UIMessage[];
-  const title = deriveTitle(snapshot);
-
-  const idx = conversations.value.findIndex((c) => c.id === id);
-  const entry: ChatConversation =
-    idx >= 0
-      ? { ...conversations.value[idx]!, title, messages: snapshot, updatedAt: now }
-      : { id, title, messages: snapshot, createdAt: now, updatedAt: now };
-
-  const next = conversations.value.filter((c) => c.id !== id);
-  next.unshift(entry);
-  conversations.value = next.slice(0, MAX_CONVERSATIONS);
-  persist();
+  const existing = conversations.value.find((c) => c.id === id);
+  if (existing) {
+    existing.title = title;
+    existing.updatedAt = now;
+  } else {
+    conversations.value.unshift({ id, title, updatedAt: now });
+  }
+  conversations.value.sort(
+    (a, b) => Number(new Date(b.updatedAt)) - Number(new Date(a.updatedAt)),
+  );
 }
 
 export function useChatHistory() {
   return {
     conversations,
     activeId,
+    visitorId,
+    ensureVisitorId,
     load,
+    fetchList,
+    fetchMessages,
     startNew,
     select,
     remove,
-    upsertActive,
+    noteActive,
   };
 }
