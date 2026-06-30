@@ -58,6 +58,30 @@ function computeVolume({
   }
 }
 
+// Wax hardness tier per water temperature, with a label in each supported locale.
+const WAX_TIER: Record<string, { fr: string, en: string }> = {
+  cold: { fr: 'froide', en: 'cold' },
+  cool: { fr: 'fraîche', en: 'cool' },
+  temperate: { fr: 'tempérée', en: 'temperate' },
+  warm: { fr: 'chaude', en: 'warm' },
+  tropical: { fr: 'tropicale', en: 'tropical' }
+}
+
+// Best-effort board length (in feet) from WooCommerce attributes — handles
+// 6'4", 188 cm and bare-foot notations. Returns undefined if nothing parses.
+function parseLengthFeet(attributes: Record<string, string[]>): number | undefined {
+  const key = Object.keys(attributes).find(k => /longueur|length|taille|size/i.test(k))
+  const raw = key ? attributes[key]?.[0] : undefined
+  if (!raw) return undefined
+  const ftIn = raw.match(/(\d+)\s*['’]\s*(\d+)?/)
+  if (ftIn) return Number(ftIn[1]) + (ftIn[2] ? Number(ftIn[2]) / 12 : 0)
+  const cm = raw.match(/(\d{2,3})\s*cm/i)
+  if (cm) return Number(cm[1]) / 30.48
+  const ft = raw.match(/(\d+(?:\.\d+)?)/)
+  if (ft) return Number(ft[1])
+  return undefined
+}
+
 const SYSTEM_PROMPT = `Tu es le conseiller IA de Prism Surfboards (https://www.prism-surfboards.com), un shaper de planches de surf.
 
 RÔLE
