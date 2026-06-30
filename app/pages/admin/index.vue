@@ -50,6 +50,14 @@ async function logout() {
           variant="ghost"
           size="sm"
         />
+        <UButton
+          to="/admin/custom-shapes"
+          :label="$t('admin.customShapes.title')"
+          icon="i-lucide-ruler"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+        />
       </div>
       <UButton
         :label="$t('admin.logout')"

@@ -89,6 +89,11 @@
       "productReembedded": "Embedding regenerated",
       "notFound": "Product not found",
       "error": "Operation failed"
+    },
+    "customShapes": {
+      "title": "Custom requests",
+      "none": "No custom-order requests yet.",
+      "viewConversation": "View conversation"
     }
   }
 }

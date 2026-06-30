@@ -89,6 +89,11 @@
       "productReembedded": "Embedding regénéré",
       "notFound": "Produit introuvable",
       "error": "Échec de l'opération"
+    },
+    "customShapes": {
+      "title": "Demandes sur-mesure",
+      "none": "Aucune demande de sur-mesure pour l'instant.",
+      "viewConversation": "Voir la conversation"
     }
   }
 }
