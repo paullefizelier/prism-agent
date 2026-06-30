@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { useChat } from "@ai-sdk/vue";
 import type { UIMessage } from "ai";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import { isPartStreaming, isToolStreaming } from "@nuxt/ui/utils/ai";
 
 // Shared chat UI used both full-screen (/) and embedded in an iframe (/embed).
@@ -92,7 +99,8 @@ async function loadConversation(id: string | null) {
 onMounted(async () => {
   // Open in the page's language when the widget loader passes ?lang=.
   const lang = route.query.lang;
-  if ((lang === "fr" || lang === "en") && lang !== locale.value) setLocale(lang);
+  if ((lang === "fr" || lang === "en") && lang !== locale.value)
+    setLocale(lang);
 
   await history.load();
   // Deep-link: restore the conversation named in ?c=<id> if it's the visitor's.
@@ -282,6 +290,7 @@ function onCartMessage(e: MessageEvent) {
   if (d.productId != null) cartResolvers.get(d.productId)?.();
   if (d.ok)
     toast.add({ title: t("product.addedToCart"), icon: "i-lucide-check" });
+  router.push({ path: "/panier" });
 }
 onMounted(() => window.addEventListener("message", onCartMessage));
 onBeforeUnmount(() => window.removeEventListener("message", onCartMessage));
@@ -664,9 +673,7 @@ function partOutput(part: unknown): any {
 
           <!-- Add to cart: indicator while preparing, then one-tap confirm card -->
           <div
-            v-else-if="
-              part.type === 'tool-addToCart' && isToolStreaming(part)
-            "
+            v-else-if="part.type === 'tool-addToCart' && isToolStreaming(part)"
             class="flex items-center gap-2 my-1 text-sm text-muted"
           >
             <UIcon
@@ -676,9 +683,7 @@ function partOutput(part: unknown): any {
             <UChatShimmer :text="$t('tools.preparingCart')" />
           </div>
           <ChatAddToCart
-            v-else-if="
-              part.type === 'tool-addToCart' && !isToolStreaming(part)
-            "
+            v-else-if="part.type === 'tool-addToCart' && !isToolStreaming(part)"
             :data="partOutput(part)"
             @add="addProductsToCart"
           />
