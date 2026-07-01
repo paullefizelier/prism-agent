@@ -83,6 +83,70 @@ function parseLengthFeet(attributes: Record<string, string[]>): number | undefin
   return undefined
 }
 
+// All foot sizes found in a product name — handles 9', 9'6, "6 pieds", and
+// ranges like "9'6 - 11'6" (returns [9.5, 11.5]).
+function feetInName(name: string): number[] {
+  const out: number[] = []
+  const re = /(\d+)\s*['’]\s*(\d+)?|\b(\d+(?:\.\d+)?)\s*(?:pieds|ft)\b/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(name)) !== null) {
+    if (m[1] !== undefined) out.push(Number(m[1]) + (m[2] ? Number(m[2]) / 12 : 0))
+    else if (m[3] !== undefined) out.push(Number(m[3]))
+  }
+  return out
+}
+
+// Pick the accessory that actually fits the context: a leash closest to the
+// board length, a boardbag that covers it (snuggest fit), the wax for the water
+// temperature. Falls back to the best semantic candidate when size is unknown.
+const ACCESSORY_KEYWORDS: Record<string, RegExp> = {
+  leash: /leash/i,
+  wax: /wax|paraffine/i,
+  bag: /housse|boardbag|board bag|sac|cover/i
+}
+function pickAccessory(
+  candidates: { id: number, name: string, categories: string[] }[],
+  cat: 'leash' | 'wax' | 'bag',
+  targetFeet: number | null,
+  waxWord: string | undefined
+): number | undefined {
+  const accessories = candidates.filter(c => matchesType(c.categories, 'accessory'))
+  const named = accessories.filter(c => ACCESSORY_KEYWORDS[cat]!.test(c.name))
+  const pool = named.length ? named : accessories
+  if (!pool.length) return undefined
+
+  if (cat === 'wax') {
+    if (waxWord) {
+      const match = pool.find(c => new RegExp(waxWord, 'i').test(c.name))
+      if (match) return match.id
+    }
+    return pool[0]!.id
+  }
+
+  if (targetFeet) {
+    const sized = pool
+      .map(c => ({ id: c.id, feet: feetInName(c.name) }))
+      .filter(c => c.feet.length > 0)
+    if (sized.length) {
+      if (cat === 'bag') {
+        // A bag fits if its largest size covers the board; take the snuggest.
+        const fits = sized
+          .filter(c => Math.max(...c.feet) >= targetFeet - 0.01)
+          .sort((a, b) => Math.max(...a.feet) - Math.max(...b.feet))
+        if (fits.length) return fits[0]!.id
+      }
+      // Leash (or bag fallback): the size closest to the target.
+      return sized
+        .sort(
+          (a, b) =>
+            Math.abs(Math.min(...a.feet) - targetFeet) -
+            Math.abs(Math.min(...b.feet) - targetFeet)
+        )[0]!.id
+    }
+  }
+  return pool[0]!.id
+}
+
 const SYSTEM_PROMPT = `Tu es le conseiller IA de Prism Surfboards (https://www.prism-surfboards.com), un shaper de planches de surf.
 
 RÔLE
@@ -426,23 +490,36 @@ export default defineLazyEventHandler(async () => {
               bag: `housse de surf${bagLength ? ` ${bagLength} pieds` : ''}`
             }
 
+            // Wax product names use English tiers (e.g. "Wax FCS Warm").
+            const waxWord = waterTemp ? WAX_TIER[waterTemp]!.en : undefined
+            const targets: Record<string, number | null> = {
+              leash: leashLength,
+              wax: null,
+              bag: bagLength
+            }
+
             const pickedIds: number[] = []
             for (const cat of categories) {
               const embedding = await embedQuery(queries[cat]!)
               const { data } = await supabase.rpc('match_products', {
                 query_embedding: JSON.stringify(embedding),
-                match_count: 20,
+                match_count: 60,
                 only_in_stock: true
               })
-              const top = ((data ?? []) as Array<Record<string, unknown>>)
+              const cands = ((data ?? []) as Array<Record<string, unknown>>)
                 .map(r => ({
                   id: r.woo_id as number,
+                  name: (r.name as string) ?? '',
                   categories: (r.categories as string[]) ?? []
                 }))
-                .filter(c => matchesType(c.categories, 'accessory'))
-                .map(c => c.id)
-                .find(id => !pickedIds.includes(id))
-              if (top != null) pickedIds.push(top)
+                .filter(c => !pickedIds.includes(c.id))
+              const id = pickAccessory(
+                cands,
+                cat as 'leash' | 'wax' | 'bag',
+                targets[cat] ?? null,
+                waxWord
+              )
+              if (id != null) pickedIds.push(id)
             }
 
             if (!pickedIds.length) return { guidance, products: [] }

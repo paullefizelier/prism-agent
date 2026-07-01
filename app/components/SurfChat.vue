@@ -221,6 +221,16 @@ function cartUrl(board: BoardCard): string {
     return board.url;
   }
 }
+// The cart page (after an add via the bridge, we send the visitor here).
+function cartPageUrl(board: BoardCard): string {
+  try {
+    const origin = new URL(board.url).origin;
+    const prefix = locale.value === "en" ? "/en" : "";
+    return `${origin}${prefix}/panier/`;
+  } catch {
+    return board.url;
+  }
+}
 // Embedded: navigate the host (WC) tab so the visitor's real session is used.
 // Full-screen app: open in a new tab so the chat stays put.
 function openUrl(url: string) {
@@ -240,19 +250,15 @@ const addingId = ref<number>();
 const cartResolvers = new Map<number, () => void>();
 
 // Post one add-to-cart to the first-party bridge; resolves when it replies
-// (prism-add-to-cart-result) or after a safety timeout. Full-screen: open the
-// cart URL directly (no bridge).
+// (prism-add-to-cart-result) or after a safety timeout. Embedded only — callers
+// handle the full-screen path (which navigates straight to the cart URL).
 function postAddToCart(board: BoardCard): Promise<void> {
-  if (!props.embedded) {
-    openUrl(cartUrl(board));
-    return Promise.resolve();
-  }
+  if (!props.embedded) return Promise.resolve();
   return new Promise<void>((resolve) => {
     let wcOrigin: string;
     try {
       wcOrigin = new URL(board.url).origin;
     } catch {
-      openUrl(cartUrl(board));
       resolve();
       return;
     }
@@ -270,17 +276,30 @@ function postAddToCart(board: BoardCard): Promise<void> {
 }
 
 function addToCart(board: BoardCard) {
+  // Full-screen: the add-to-cart URL both adds the item and lands on the cart.
+  if (!props.embedded) {
+    openUrl(cartUrl(board));
+    return;
+  }
   addingId.value = board.id;
   void postAddToCart(board).finally(() => {
     if (addingId.value === board.id) addingId.value = undefined;
+    openUrl(cartPageUrl(board)); // send the visitor to the cart once added
   });
 }
 
 // Agent-driven add (addToCart tool, after the visitor taps confirm). Sequential
 // on purpose: firing the WooCommerce add_to_cart calls in parallel races on the
 // cart session and only one item sticks — we wait for each before the next.
+// Once everything is in, send the visitor to the cart page.
 async function addProductsToCart(products: { id: number; url: string }[]) {
+  const first = products[0] as BoardCard | undefined;
+  if (!props.embedded) {
+    if (first) openUrl(cartUrl(first));
+    return;
+  }
   for (const p of products) await postAddToCart(p as BoardCard);
+  if (first) openUrl(cartPageUrl(first));
 }
 
 function onCartMessage(e: MessageEvent) {

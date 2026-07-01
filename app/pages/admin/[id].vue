@@ -5,6 +5,11 @@ interface Board {
   id: number
   name: string
   url: string
+  price?: string
+  regularPrice?: string
+  onSale?: boolean
+  inStock?: boolean
+  image?: string | null
 }
 interface ConvoMessage {
   role: string
@@ -78,23 +83,67 @@ function products(part: unknown): Board[] {
               v-else-if="
                 part.type === 'tool-recommendProducts' && products(part).length
               "
-              class="mt-1 text-xs"
+              class="mt-1.5 text-xs"
             >
-              <p class="text-muted mb-0.5">
+              <p class="text-muted mb-1">
                 {{ $t("admin.recommendedBoards") }}
               </p>
-              <ul class="space-y-0.5">
-                <li
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <a
                   v-for="b in products(part)"
                   :key="b.id"
+                  :href="b.url"
+                  target="_blank"
+                  rel="noopener"
+                  class="group flex gap-2 rounded-lg border border-default bg-default p-2 transition-shadow hover:shadow-md"
                 >
-                  <a
-                    :href="b.url"
-                    target="_blank"
-                    class="underline"
-                  >{{ b.name }}</a>
-                </li>
-              </ul>
+                  <div
+                    class="relative size-14 shrink-0 overflow-hidden rounded-md bg-elevated"
+                  >
+                    <img
+                      v-if="b.image"
+                      :src="b.image"
+                      :alt="b.name"
+                      class="absolute inset-0 size-full object-cover"
+                      loading="lazy"
+                    >
+                    <UIcon
+                      v-else
+                      name="i-lucide-waves"
+                      class="absolute inset-0 m-auto size-5 text-muted"
+                    />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p
+                      class="truncate font-medium text-default group-hover:text-primary"
+                    >
+                      {{ b.name }}
+                    </p>
+                    <div class="mt-0.5 flex items-baseline gap-1.5">
+                      <span
+                        v-if="b.price"
+                        class="font-semibold text-default"
+                      >{{ b.price }} €</span>
+                      <span
+                        v-if="b.onSale && b.regularPrice"
+                        class="text-muted line-through"
+                      >{{ b.regularPrice }} €</span>
+                    </div>
+                    <span
+                      class="text-[11px]"
+                      :class="
+                        b.inStock === false ? 'text-muted' : 'text-success'
+                      "
+                    >
+                      {{
+                        b.inStock === false
+                          ? $t("product.outOfStock")
+                          : $t("product.inStock")
+                      }}
+                    </span>
+                  </div>
+                </a>
+              </div>
             </div>
           </template>
         </div>
