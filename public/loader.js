@@ -2,7 +2,7 @@
  * Prism Surf Advisor — embeddable widget loader.
  *
  * Drop this on any WooCommerce page:
- *   <script src="https://prism-agent-ten.vercel.app/loader.js" defer></script>
+ *   <script src="https://chat.prism-surfboards.com/loader.js" defer></script>
  *
  * IMPORTANT (LiteSpeed / optimiseurs JS): do NOT enqueue this via
  * wp_enqueue_script — LiteSpeed "JS Combine" merges/drops the external tag for
@@ -10,7 +10,7 @@
  * logged-in users but vanishes for anonymous visitors. Output it raw in
  * wp_footer with no-optimize markers instead:
  *   add_action('wp_footer', function () {
- *     echo '<script src="https://prism-agent-ten.vercel.app/loader.js" defer '
+ *     echo '<script src="https://chat.prism-surfboards.com/loader.js" defer '
  *        . 'data-no-optimize="1" data-no-defer="1" data-no-minify="1" '
  *        . 'data-cfasync="false"></script>';
  *   }, 99);
@@ -41,7 +41,7 @@
   }
   // Fallback only — origin is normally auto-derived from this script's src above.
   // Update when the app moves to its final domain (e.g. chat.prism-surfboards.com).
-  if (!origin) origin = 'https://prism-agent-ten.vercel.app';
+  if (!origin) origin = 'https://chat.prism-surfboards.com';
 
   // Per-tab UI state (open / enlarged / nudge dismissed) so the widget survives
   // navigation between shop pages within the same browsing session.
